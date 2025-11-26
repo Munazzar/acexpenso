@@ -1,4 +1,4 @@
-// app.js
+// app.js – ACexpenso
 
 const DEFAULT_PIN = "2807";
 
@@ -8,61 +8,68 @@ const state = {
     entries: [],
     closedDays: []
   },
-  authenticated: false,
-  chart: null,
+  ui: {
+    activeView: "view-reports",
+    editingEntryId: null,
+    chartMetric: "profit"
+  },
   currentRange: {
     from: null,
     to: null
   },
-  ui: {
-    activeView: "reports",
-    editingEntryId: null
-  }
+  charts: {
+    trendChart: null,
+    expenseChart: null
+  },
+  authenticated: false
 };
 
 document.addEventListener("DOMContentLoaded", () => {
   initTheme();
   initViewNavigation();
-  initEvents();
+  initTopBar();
+  initEventHandlers();
   initPWA();
-  loadInitialData();
+  bootstrapData();
 });
 
-/* THEME */
+/* ============================
+ * THEME
+ * ============================ */
 
 function initTheme() {
-  const stored = localStorage.getItem("acube-theme");
+  const stored = localStorage.getItem("acexpenso-theme");
   const initial = stored || "dark";
   setTheme(initial);
 
-  const toggleBtn = document.getElementById("themeToggle");
+  const toggleBtn = document.getElementById("themeToggleBtn");
   if (toggleBtn) {
     toggleBtn.addEventListener("click", () => {
-      const current = document
-        .getElementById("app")
-        .classList.contains("app--dark")
-        ? "dark"
-        : "light";
-      const next = current === "dark" ? "light" : "dark";
+      const root = document.getElementById("appRoot");
+      const isDark = root.classList.contains("app--dark");
+      const next = isDark ? "light" : "dark";
       setTheme(next);
-      localStorage.setItem("acube-theme", next);
+      localStorage.setItem("acexpenso-theme", next);
     });
   }
 }
 
 function setTheme(theme) {
-  const app = document.getElementById("app");
-  if (!app) return;
-  app.classList.toggle("app--dark", theme === "dark");
-  app.classList.toggle("app--light", theme === "light");
+  const root = document.getElementById("appRoot");
+  if (!root) return;
 
-  const toggleBtn = document.getElementById("themeToggle");
+  root.classList.toggle("app--dark", theme === "dark");
+  root.classList.toggle("app--light", theme === "light");
+
+  const toggleBtn = document.getElementById("themeToggleBtn");
   if (toggleBtn) {
-    toggleBtn.textContent = theme === "dark" ? "Light mode" : "Dark mode";
+    toggleBtn.textContent = theme === "dark" ? "Theme: Dark" : "Theme: Light";
   }
 }
 
-/* VIEW NAVIGATION (SIDEBAR) */
+/* ============================
+ * VIEW NAVIGATION (SIDEBAR)
+ * ============================ */
 
 function initViewNavigation() {
   const sidebar = document.getElementById("sidebar");
@@ -77,15 +84,12 @@ function initViewNavigation() {
 
   navButtons.forEach((btn) => {
     btn.addEventListener("click", () => {
-      const view = btn.dataset.view || "reports";
-      switchView(view);
+      const viewId = btn.dataset.view || "view-reports";
+      switchView(viewId);
 
-      navButtons.forEach((b) =>
-        b.classList.toggle(
-          "sidebar-nav__item--active",
-          b === btn
-        )
-      );
+      navButtons.forEach((b) => {
+        b.classList.toggle("sidebar-nav__item--active", b === btn);
+      });
 
       if (window.innerWidth <= 960 && sidebar) {
         sidebar.classList.add("sidebar--hidden");
@@ -94,152 +98,281 @@ function initViewNavigation() {
   });
 
   // Default view
-  switchView("reports");
+  switchView("view-reports");
 }
 
-function switchView(view) {
-  state.ui.activeView = view;
+function switchView(viewId) {
+  state.ui.activeView = viewId;
 
   document.querySelectorAll(".view").forEach((el) => {
-    el.classList.toggle(
-      "view--active",
-      el.id === `view-${view}`
-    );
+    el.classList.toggle("view--active", el.id === viewId);
   });
 
-  if (view === "add") {
+  if (viewId === "view-add") {
     prepareAddFormForNew();
+    renderReminderBanner();
+  } else if (viewId === "view-data") {
+    renderDataTable();
+  } else if (viewId === "view-settings") {
+    renderClosedDaysList();
+  } else if (viewId === "view-reports") {
+    renderReports();
   }
 }
 
-/* INITIAL LOAD */
+/* ============================
+ * TOP BAR (AUTH, PRINT, STATUS)
+ * ============================ */
 
-async function loadInitialData() {
+function initTopBar() {
+  const signInBtn = document.getElementById("signInBtn");
+  const signOutBtn = document.getElementById("signOutBtn");
+  const printReportsBtn = document.getElementById("printReportsBtn");
+
+  if (printReportsBtn) {
+    printReportsBtn.addEventListener("click", () => window.print());
+  }
+
+  if (signInBtn) {
+    signInBtn.addEventListener("click", () => {
+      if (window.driveSignIn) {
+        window.driveSignIn();
+      }
+      // Give GIS a moment to complete, then reload from Drive if possible
+      setTimeout(() => {
+        updateDriveStatusUI();
+        bootstrapData();
+      }, 1500);
+    });
+  }
+
+  if (signOutBtn) {
+    signOutBtn.addEventListener("click", () => {
+      if (window.driveSignOut) {
+        window.driveSignOut();
+      }
+      state.authenticated = false;
+      updateDriveStatusUI();
+      showToast("Signed out of Google Drive.");
+    });
+  }
+}
+
+/* ============================
+ * INITIAL DATA LOAD
+ * ============================ */
+
+async function bootstrapData() {
   showLoading(true);
+  updateDriveStatusUI("Loading…");
   try {
     let data = await fetchExpenseData();
-    if (!data || typeof data !== "object") {
-      data = {};
-    }
+    if (!data || typeof data !== "object") data = {};
     if (!data.settings) data.settings = {};
     if (!Array.isArray(data.entries)) data.entries = [];
     if (!Array.isArray(data.closedDays)) data.closedDays = [];
 
     state.data = data;
     await ensurePinHashExists();
-
     initDefaultDates();
     renderAll();
   } catch (err) {
     console.error("Error loading data from Drive", err);
-    showToast("Could not load data from Drive. Check Drive setup.", true);
+    showToast("Could not load data from Drive. Using local backup if available.", true);
   } finally {
     showLoading(false);
+    updateDriveStatusUI();
   }
 }
 
 async function ensurePinHashExists() {
+  if (!state.data.settings) state.data.settings = {};
   if (state.data.settings.pinHash) return;
   const hash = await hashPin(DEFAULT_PIN);
   state.data.settings.pinHash = hash;
-  await saveExpenseData(state.data);
 }
 
 function initDefaultDates() {
   const today = new Date();
   const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
-  const fromInput = document.getElementById("fromDate");
-  const toInput = document.getElementById("toDate");
-  const entryDate = document.getElementById("entryDate");
-  const closeDayDate = document.getElementById("closeDayDate");
-  const dataFromDate = document.getElementById("dataFromDate");
-  const dataToDate = document.getElementById("dataToDate");
-
   const todayISO = toISODate(today);
   const firstISO = toISODate(firstOfMonth);
 
-  if (fromInput) fromInput.value = firstISO;
-  if (toInput) toInput.value = todayISO;
-  if (entryDate) entryDate.value = todayISO;
-  if (closeDayDate) closeDayDate.value = todayISO;
-  if (dataFromDate) dataFromDate.value = firstISO;
-  if (dataToDate) dataToDate.value = todayISO;
+  const reportFrom = document.getElementById("reportFrom");
+  const reportTo = document.getElementById("reportTo");
+  const entryDate = document.getElementById("entryDate");
+  const dataFrom = document.getElementById("dataFrom");
+  const dataTo = document.getElementById("dataTo");
+  const closedInput = document.getElementById("closedDateInput");
 
-  state.currentRange = { from: firstISO, to: todayISO };
+  if (reportFrom) reportFrom.value = firstISO;
+  if (reportTo) reportTo.value = todayISO;
+  if (entryDate) entryDate.value = todayISO;
+  if (dataFrom) dataFrom.value = firstISO;
+  if (dataTo) dataTo.value = todayISO;
+  if (closedInput) closedInput.value = todayISO;
+
+  state.currentRange.from = firstISO;
+  state.currentRange.to = todayISO;
 }
 
-/* EVENTS */
+/* ============================
+ * EVENTS
+ * ============================ */
 
-function initEvents() {
-  const printBtn = document.getElementById("printReportBtn");
-  if (printBtn) {
-    printBtn.addEventListener("click", () => window.print());
+function initEventHandlers() {
+  // Reports date range
+  const reportFrom = document.getElementById("reportFrom");
+  const reportTo = document.getElementById("reportTo");
+
+  if (reportFrom) {
+    reportFrom.addEventListener("change", () => {
+      state.currentRange.from = reportFrom.value || null;
+      renderReports();
+    });
   }
-
-  const applyRangeBtn = document.getElementById("applyRangeBtn");
-  if (applyRangeBtn) {
-    applyRangeBtn.addEventListener("click", () => {
-      const from = document.getElementById("fromDate").value || null;
-      const to = document.getElementById("toDate").value || null;
-      state.currentRange = { from, to };
+  if (reportTo) {
+    reportTo.addEventListener("change", () => {
+      state.currentRange.to = reportTo.value || null;
       renderReports();
     });
   }
 
+  // Quick range buttons
+  const quickTodayBtn = document.getElementById("quickTodayBtn");
+  const quickThisWeekBtn = document.getElementById("quickThisWeekBtn");
+  const quickThisMonthBtn = document.getElementById("quickThisMonthBtn");
+
+  if (quickTodayBtn) {
+    quickTodayBtn.addEventListener("click", () => {
+      const today = new Date();
+      const iso = toISODate(today);
+      if (reportFrom) reportFrom.value = iso;
+      if (reportTo) reportTo.value = iso;
+      state.currentRange = { from: iso, to: iso };
+      renderReports();
+    });
+  }
+
+  if (quickThisWeekBtn) {
+    quickThisWeekBtn.addEventListener("click", () => {
+      const today = new Date();
+      const start = getWeekStart(today);
+      const end = getWeekEnd(today);
+      if (reportFrom) reportFrom.value = toISODate(start);
+      if (reportTo) reportTo.value = toISODate(end);
+      state.currentRange = { from: toISODate(start), to: toISODate(end) };
+      renderReports();
+    });
+  }
+
+  if (quickThisMonthBtn) {
+    quickThisMonthBtn.addEventListener("click", () => {
+      const today = new Date();
+      const first = new Date(today.getFullYear(), today.getMonth(), 1);
+      const last = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      if (reportFrom) reportFrom.value = toISODate(first);
+      if (reportTo) reportTo.value = toISODate(last);
+      state.currentRange = { from: toISODate(first), to: toISODate(last) };
+      renderReports();
+    });
+  }
+
+  // Chart metric toggle
+  const metricToggle = document.getElementById("chartMetricToggle");
+  if (metricToggle) {
+    metricToggle.addEventListener("click", (e) => {
+      const btn = e.target.closest(".chart-metric-btn");
+      if (!btn) return;
+      const metric = btn.dataset.metric || "profit";
+      state.ui.chartMetric = metric;
+      document
+        .querySelectorAll(".chart-metric-btn")
+        .forEach((b) => b.classList.toggle("chart-metric-btn--active", b === btn));
+      renderReports();
+    });
+  }
+
+  // Group-by select
+  const groupBySelect = document.getElementById("reportGroupBy");
+  if (groupBySelect) {
+    groupBySelect.addEventListener("change", () => {
+      renderReports();
+    });
+  }
+
+  // Add record form
   const entryForm = document.getElementById("entryForm");
   if (entryForm) {
     entryForm.addEventListener("submit", onEntrySubmit);
   }
 
+  const resetEntryBtn = document.getElementById("resetEntryBtn");
+  if (resetEntryBtn) {
+    resetEntryBtn.addEventListener("click", () => prepareAddFormForNew(true));
+  }
+
+  // Data table filters
+  const dataFrom = document.getElementById("dataFrom");
+  const dataTo = document.getElementById("dataTo");
+  const dataTypeFilter = document.getElementById("dataTypeFilter");
+  const dataCategoryFilter = document.getElementById("dataCategoryFilter");
+  const dataSearch = document.getElementById("dataSearch");
+
+  [dataFrom, dataTo, dataTypeFilter, dataCategoryFilter, dataSearch].forEach(
+    (el) => {
+      if (!el) return;
+      el.addEventListener("input", renderDataTable);
+      el.addEventListener("change", renderDataTable);
+    }
+  );
+
+  // Export JSON
+  const dataExportBtn = document.getElementById("dataExportBtn");
+  if (dataExportBtn) {
+    dataExportBtn.addEventListener("click", () => {
+      exportJsonBackup();
+    });
+  }
+
+  // PIN form
   const pinForm = document.getElementById("pinForm");
   if (pinForm) {
     pinForm.addEventListener("submit", onPinFormSubmit);
   }
 
-  const closeDayBtn = document.getElementById("closeDayBtn");
-  if (closeDayBtn) {
-    closeDayBtn.addEventListener("click", onCloseDay);
-  }
-
-  const chartSelect = document.getElementById("chartModeSelect");
-  if (chartSelect) {
-    chartSelect.addEventListener("change", () => {
-      const entries = filterEntriesByDateRange(
-        state.data.entries || [],
-        state.currentRange.from,
-        state.currentRange.to
-      );
-      renderChart(entries);
-    });
-  }
-
-  const dataFilterBtn = document.getElementById("dataFilterBtn");
-  if (dataFilterBtn) {
-    dataFilterBtn.addEventListener("click", () => {
-      renderEntriesTable();
-    });
+  // Closed day form
+  const closedDayForm = document.getElementById("closedDayForm");
+  if (closedDayForm) {
+    closedDayForm.addEventListener("submit", onClosedDaySubmit);
   }
 }
 
-/* ENTRY HANDLING */
+/* ============================
+ * ADD / EDIT ENTRY
+ * ============================ */
 
-function prepareAddFormForNew() {
+function prepareAddFormForNew(clearAll = false) {
   state.ui.editingEntryId = null;
+
   const entryDate = document.getElementById("entryDate");
-  if (entryDate) {
-    if (!entryDate.value) {
-      entryDate.value = toISODate(new Date());
-    }
-  }
-  const type = document.getElementById("entryType");
-  const category = document.getElementById("entryCategory");
-  const amount = document.getElementById("entryAmount");
-  const note = document.getElementById("entryNote");
-  if (type) type.value = "income";
-  if (category) category.value = "";
-  if (amount) amount.value = "";
-  if (note) note.value = "";
+  const entryType = document.getElementById("entryType");
+  const entryAmount = document.getElementById("entryAmount");
+  const entryCategory = document.getElementById("entryCategory");
+  const entryPaymentMode = document.getElementById("entryPaymentMode");
+  const entryNote = document.getElementById("entryNote");
+  const entryClosed = document.getElementById("entryClosed");
+
+  const todayISO = toISODate(new Date());
+
+  if (!entryDate.value || clearAll) entryDate.value = todayISO;
+  if (entryType) entryType.value = "expense";
+  if (entryAmount && clearAll) entryAmount.value = "";
+  if (entryCategory && clearAll) entryCategory.value = "";
+  if (entryPaymentMode && clearAll) entryPaymentMode.value = "";
+  if (entryNote && clearAll) entryNote.value = "";
+  if (entryClosed) entryClosed.checked = false;
 }
 
 async function onEntrySubmit(event) {
@@ -247,12 +380,30 @@ async function onEntrySubmit(event) {
 
   const dateStr = document.getElementById("entryDate").value;
   const type = document.getElementById("entryType").value;
-  const category = document.getElementById("entryCategory").value.trim();
   const amountStr = document.getElementById("entryAmount").value;
+  const category = document.getElementById("entryCategory").value.trim();
+  const paymentMode = document.getElementById("entryPaymentMode").value;
   const note = document.getElementById("entryNote").value.trim();
+  const closedCheckbox = document.getElementById("entryClosed");
 
-  if (!dateStr || !type || !amountStr) {
-    showToast("Date, type and amount are required.", true);
+  const closedChecked = closedCheckbox ? closedCheckbox.checked : false;
+
+  if (!dateStr) {
+    showToast("Date is required.", true);
+    return;
+  }
+
+  // If marked as closed & no amount, treat as closed day (no entry)
+  if (closedChecked && !amountStr) {
+    await addClosedDay(dateStr);
+    closedCheckbox.checked = false;
+    showToast(`Marked ${dateStr} as shop closed.`);
+    renderReminderBanner();
+    return;
+  }
+
+  if (!amountStr || !type) {
+    showToast("Type and amount are required (or mark as closed day).", true);
     return;
   }
 
@@ -262,44 +413,50 @@ async function onEntrySubmit(event) {
     return;
   }
 
-  const ok = await ensureAuthenticated();
-  if (!ok) return;
-
   const now = new Date();
   const editingId = state.ui.editingEntryId;
 
   if (editingId) {
-    // Update existing entry
+    // EDIT existing entry: require PIN
+    const ok = await ensureAuthenticated();
+    if (!ok) return;
+
     const entry = state.data.entries.find((e) => e.id === editingId);
-    if (entry) {
-      entry.date = dateStr;
-      entry.type = type;
-      entry.category = category;
-      entry.amount = amount;
-      entry.note = note;
+    if (!entry) {
+      showToast("Record not found.", true);
+      return;
     }
+    entry.date = dateStr;
+    entry.type = type;
+    entry.amount = amount;
+    entry.category = category;
+    entry.paymentMode = paymentMode || "";
+    entry.note = note;
+    entry.updatedAt = now.toISOString();
     state.ui.editingEntryId = null;
+    await persistData("Record updated.");
   } else {
-    // Create new entry
+    // NEW entry: allowed without PIN
     const id = `${dateStr}_${now.getTime()}`;
     state.data.entries.push({
       id,
       date: dateStr,
       type,
-      category,
       amount,
-      note
+      category,
+      paymentMode: paymentMode || "",
+      note,
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString()
     });
+    await persistData("Record added.");
   }
 
-  await persistData("Record saved.");
-
-  // Keep same date; clear amount & note for quick multiple entries
+  // Keep same date & type; clear amount & note for quick multiple entries
   document.getElementById("entryAmount").value = "";
   document.getElementById("entryNote").value = "";
+  if (closedCheckbox) closedCheckbox.checked = false;
 }
-
-/* EDIT / DELETE */
 
 function startEditEntry(entryId) {
   const entry = state.data.entries.find((e) => e.id === entryId);
@@ -309,20 +466,27 @@ function startEditEntry(entryId) {
   }
 
   state.ui.editingEntryId = entryId;
+
   const date = document.getElementById("entryDate");
   const type = document.getElementById("entryType");
   const category = document.getElementById("entryCategory");
   const amount = document.getElementById("entryAmount");
+  const paymentMode = document.getElementById("entryPaymentMode");
   const note = document.getElementById("entryNote");
+  const closedCheckbox = document.getElementById("entryClosed");
 
   if (date) date.value = entry.date;
   if (type) type.value = entry.type;
   if (category) category.value = entry.category || "";
   if (amount) amount.value = entry.amount;
+  if (paymentMode) paymentMode.value = entry.paymentMode || "";
   if (note) note.value = entry.note || "";
+  if (closedCheckbox) closedCheckbox.checked = false;
 
-  switchView("add");
+  switchView("view-add");
 }
+
+/* DELETE ENTRY */
 
 async function onDeleteEntry(entryId) {
   const okAuth = await ensureAuthenticated();
@@ -331,25 +495,27 @@ async function onDeleteEntry(entryId) {
   const confirmDelete = window.confirm("Delete this record permanently?");
   if (!confirmDelete) return;
 
-  state.data.entries = state.data.entries.filter((e) => e.id !== entryId);
+  state.data.entries = (state.data.entries || []).filter((e) => e.id !== entryId);
   await persistData("Record deleted.");
 }
 
-/* PIN AND AUTH */
+/* ============================
+ * PIN & AUTH
+ * ============================ */
 
 async function onPinFormSubmit(event) {
   event.preventDefault();
 
   const current = document.getElementById("currentPin").value;
   const next = document.getElementById("newPin").value;
-  const confirm = document.getElementById("confirmNewPin").value;
+  const confirmPin = document.getElementById("confirmPin").value;
 
-  if (!current || !next || !confirm) {
+  if (!current || !next || !confirmPin) {
     showToast("Fill all PIN fields.", true);
     return;
   }
 
-  if (next !== confirm) {
+  if (next !== confirmPin) {
     showToast("New PIN and confirmation do not match.", true);
     return;
   }
@@ -366,7 +532,7 @@ async function onPinFormSubmit(event) {
 
   document.getElementById("currentPin").value = "";
   document.getElementById("newPin").value = "";
-  document.getElementById("confirmNewPin").value = "";
+  document.getElementById("confirmPin").value = "";
 
   await persistData("PIN updated.");
 }
@@ -398,97 +564,132 @@ async function verifyPin(pin) {
   return hash === state.data.settings.pinHash;
 }
 
-/* DAY CLOSING */
+/* ============================
+ * CLOSED DAYS
+ * ============================ */
 
-async function onCloseDay() {
-  const dateStr = document.getElementById("closeDayDate").value;
+async function onClosedDaySubmit(event) {
+  event.preventDefault();
+  const dateStr = document.getElementById("closedDateInput").value;
   if (!dateStr) {
-    showToast("Select a date to close.", true);
+    showToast("Select a date to add as closed.", true);
     return;
   }
+  await addClosedDay(dateStr);
+}
 
+async function addClosedDay(dateStr) {
   const ok = await ensureAuthenticated();
   if (!ok) return;
 
-  if (!Array.isArray(state.data.closedDays)) {
-    state.data.closedDays = [];
-  }
+  if (!Array.isArray(state.data.closedDays)) state.data.closedDays = [];
   if (!state.data.closedDays.includes(dateStr)) {
     state.data.closedDays.push(dateStr);
+    await persistData(`Marked ${dateStr} as closed.`);
+  } else {
+    showToast("This date is already marked as closed.");
   }
-
-  await persistData(`Marked ${dateStr} as closed.`);
 }
 
-/* REPORTING */
+async function removeClosedDay(dateStr) {
+  const ok = await ensureAuthenticated();
+  if (!ok) return;
+
+  state.data.closedDays = (state.data.closedDays || []).filter((d) => d !== dateStr);
+  await persistData(`Removed ${dateStr} from closed days.`);
+}
+
+function renderClosedDaysList() {
+  const list = document.getElementById("closedDaysList");
+  if (!list) return;
+
+  const arr = Array.isArray(state.data.closedDays)
+    ? [...state.data.closedDays]
+    : [];
+  arr.sort();
+
+  list.innerHTML = "";
+  if (!arr.length) {
+    const li = document.createElement("li");
+    li.className = "recent-list__empty";
+    li.textContent = "No closed days recorded yet.";
+    list.appendChild(li);
+    return;
+  }
+
+  arr.forEach((dateStr) => {
+    const d = parseISODate(dateStr);
+    const li = document.createElement("li");
+    li.className = "recent-list__item";
+    li.innerHTML = `
+      <div class="recent-list__main">
+        <span>${formatShortDate(d)} (${dateStr})</span>
+        <button type="button" class="button button--ghost" style="font-size:0.75rem;">Remove</button>
+      </div>
+    `;
+    const btn = li.querySelector("button");
+    btn.addEventListener("click", () => removeClosedDay(dateStr));
+    list.appendChild(li);
+  });
+}
+
+/* ============================
+ * REPORTS & CHARTS
+ * ============================ */
 
 function renderAll() {
   renderReports();
-  renderEntriesTable();
+  renderDataTable();
+  renderReminderBanner();
+  updateCategoryDatalist();
+  renderClosedDaysList();
 }
 
 function renderReports() {
   const entries = state.data.entries || [];
-  const today = new Date();
+  const { from, to } = state.currentRange;
 
-  const todayEntries = entries.filter((e) =>
-    isSameDay(parseISODate(e.date), today)
-  );
-  const weekEntries = entries.filter((e) =>
-    isSameWeek(parseISODate(e.date), today)
-  );
-  const monthEntries = entries.filter((e) =>
-    isSameMonth(parseISODate(e.date), today)
-  );
-  const yearEntries = entries.filter((e) =>
-    isSameYear(parseISODate(e.date), today)
-  );
+  const rangeEntries = filterEntriesByDateRange(entries, from, to);
+  const summary = computeSummary(rangeEntries);
 
-  updateSummaryCard("todaySummary", "Today", computeSummary(todayEntries));
-  updateSummaryCard("weekSummary", "This week", computeSummary(weekEntries));
-  updateSummaryCard("monthSummary", "This month", computeSummary(monthEntries));
-  updateSummaryCard("yearSummary", "This year", computeSummary(yearEntries));
+  const totalIncomeEl = document.getElementById("summaryTotalIncome");
+  const totalExpenseEl = document.getElementById("summaryTotalExpense");
+  const totalProfitEl = document.getElementById("summaryTotalProfit");
+  const entryCountEl = document.getElementById("summaryEntryCount");
 
-  const rangeEntries = filterEntriesByDateRange(
-    entries,
-    state.currentRange.from,
-    state.currentRange.to
-  );
-  const rangeSummary = computeSummary(rangeEntries);
+  if (totalIncomeEl) totalIncomeEl.textContent = "₹" + formatCurrency(summary.income);
+  if (totalExpenseEl) totalExpenseEl.textContent = "₹" + formatCurrency(summary.expense);
+  if (totalProfitEl) totalProfitEl.textContent = "₹" + formatCurrency(summary.profit);
+  if (entryCountEl) entryCountEl.textContent = String(rangeEntries.length);
 
   const rangeTitleEl = document.getElementById("rangeTitle");
-  const rangeTotalsEl = document.getElementById("rangeTotals");
+  const rangeSubtitleEl = document.getElementById("rangeSubtitle");
 
-  if (state.currentRange.from || state.currentRange.to) {
-    const fromLabel = state.currentRange.from || "start";
-    const toLabel = state.currentRange.to || "end";
-    rangeTitleEl.textContent = `From ${fromLabel} to ${toLabel}`;
-  } else {
-    rangeTitleEl.textContent = "All time";
+  if (rangeTitleEl && rangeSubtitleEl) {
+    if (!entries.length) {
+      rangeTitleEl.textContent = "No data yet";
+      rangeSubtitleEl.textContent =
+        "Start by adding collections and expenses in the Add record view.";
+    } else if (from || to) {
+      const fromLabel = from || "start";
+      const toLabel = to || "end";
+      rangeTitleEl.textContent = `From ${fromLabel} to ${toLabel}`;
+      rangeSubtitleEl.textContent =
+        `Collections: ₹${formatCurrency(summary.income)} · ` +
+        `Expenses: ₹${formatCurrency(summary.expense)} · ` +
+        `Profit: ₹${formatCurrency(summary.profit)}`;
+    } else {
+      rangeTitleEl.textContent = "All time overview";
+      rangeSubtitleEl.textContent =
+        `Total collections: ₹${formatCurrency(summary.income)}, ` +
+        `total expenses: ₹${formatCurrency(summary.expense)}, ` +
+        `net profit: ₹${formatCurrency(summary.profit)}.`;
+    }
   }
 
-  rangeTotalsEl.textContent =
-    `Income: ${formatCurrency(rangeSummary.income)}, ` +
-    `Expenses: ${formatCurrency(rangeSummary.expense)}, ` +
-    `Profit: ${formatCurrency(rangeSummary.profit)}`;
-
-  renderChart(rangeEntries);
-  renderRecentEntries(entries);
-  renderReminders(entries);
-}
-
-function updateSummaryCard(elementId, label, summary) {
-  const card = document.getElementById(elementId);
-  if (!card) return;
-  const labelEl = card.querySelector(".summary-card__label");
-  const incomeEl = card.querySelector(".summary-card__income");
-  const expenseEl = card.querySelector(".summary-card__expense");
-  const profitEl = card.querySelector(".summary-card__profit");
-
-  if (labelEl) labelEl.textContent = label;
-  if (incomeEl) incomeEl.textContent = formatCurrency(summary.income);
-  if (expenseEl) expenseEl.textContent = formatCurrency(summary.expense);
-  if (profitEl) profitEl.textContent = formatCurrency(summary.profit);
+  renderTrendChart(rangeEntries);
+  renderExpenseCategoryChart(rangeEntries);
+  renderReportsRecentList(rangeEntries);
 }
 
 function computeSummary(entries) {
@@ -522,39 +723,59 @@ function filterEntriesByDateRange(entries, fromStr, toStr) {
     .sort(sortByDateAsc);
 }
 
-/* CHARTS */
+/* Trend chart: metric + groupBy */
 
-function renderChart(entries) {
-  const canvas = document.getElementById("profitChart");
-  if (!canvas) return;
+function renderTrendChart(entries) {
+  const canvas = document.getElementById("trendChart");
+  if (!canvas || typeof Chart === "undefined") return;
 
-  if (state.chart) {
-    state.chart.destroy();
-    state.chart = null;
+  if (state.charts.trendChart) {
+    state.charts.trendChart.destroy();
+    state.charts.trendChart = null;
   }
 
-  const modeSelect = document.getElementById("chartModeSelect");
-  const mode = modeSelect ? modeSelect.value : "monthly";
+  const metric = state.ui.chartMetric || "profit";
+  const groupBySelect = document.getElementById("reportGroupBy");
+  const groupBy = groupBySelect ? groupBySelect.value || "monthly" : "monthly";
 
-  const grouped = groupEntriesByMode(entries, mode);
+  const grouped = groupEntriesForTrend(entries, groupBy);
   const labels = grouped.map((g) => g.label);
-  const profits = grouped.map((g) => g.profit);
+  let data;
+  let label;
+
+  if (metric === "income") {
+    data = grouped.map((g) => g.income);
+    label = "Collections";
+  } else if (metric === "expense") {
+    data = grouped.map((g) => g.expense);
+    label = "Expenses";
+  } else {
+    data = grouped.map((g) => g.profit);
+    label = "Profit";
+  }
 
   const ctx = canvas.getContext("2d");
-  state.chart = new Chart(ctx, {
-    type: "bar",
+  state.charts.trendChart = new Chart(ctx, {
+    type: "line",
     data: {
       labels,
       datasets: [
         {
-          label: "Profit",
-          data: profits
+          label,
+          data,
+          tension: 0.3,
+          borderWidth: 2,
+          pointRadius: 3,
+          pointHoverRadius: 4
         }
       ]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true }
+      },
       scales: {
         y: {
           beginAtZero: true
@@ -564,7 +785,7 @@ function renderChart(entries) {
   });
 }
 
-function groupEntriesByMode(entries, mode) {
+function groupEntriesForTrend(entries, mode) {
   const map = new Map();
 
   entries.forEach((entry) => {
@@ -573,37 +794,25 @@ function groupEntriesByMode(entries, mode) {
 
     const year = d.getFullYear();
     const month = d.getMonth();
-    const quarter = Math.floor(month / 3) + 1;
 
     let key;
     let label;
     let sortValue;
 
-    if (mode === "daily") {
-      key = toISODate(d);
-      label = formatShortDate(d);
-      sortValue = d.getTime();
-    } else if (mode === "weekly") {
-      const monday = getWeekStart(d);
-      key = toISODate(monday);
-      label = "Week of " + formatShortDate(monday);
-      sortValue = monday.getTime();
-    } else if (mode === "quarterly") {
-      key = `${year}-Q${quarter}`;
-      label = `Q${quarter} ${year}`;
-      const quarterStart = new Date(year, (quarter - 1) * 3, 1);
-      sortValue = quarterStart.getTime();
-    } else if (mode === "yearly") {
+    if (mode === "yearly") {
       key = `${year}`;
-      label = `${year}`;
-      const yearStart = new Date(year, 0, 1);
-      sortValue = yearStart.getTime();
+      label = String(year);
+      sortValue = new Date(year, 0, 1).getTime();
+    } else if (mode === "all") {
+      key = "all";
+      label = "All";
+      sortValue = 0;
     } else {
-      const monthIndex = month + 1;
-      key = `${year}-${String(monthIndex).padStart(2, "0")}`;
+      // monthly
+      const mIndex = month + 1;
+      key = `${year}-${String(mIndex).padStart(2, "0")}`;
       label = `${getMonthShortName(month)} ${year}`;
-      const monthStart = new Date(year, month, 1);
-      sortValue = monthStart.getTime();
+      sortValue = new Date(year, month, 1).getTime();
     }
 
     if (!map.has(key)) {
@@ -630,20 +839,69 @@ function groupEntriesByMode(entries, mode) {
   return Array.from(map.values()).sort((a, b) => a.sortValue - b.sortValue);
 }
 
-/* RECENT ENTRIES */
+/* Expense category pie chart */
 
-function renderRecentEntries(entries) {
-  const list = document.getElementById("recentEntriesList");
+function renderExpenseCategoryChart(entries) {
+  const canvas = document.getElementById("expenseCategoryChart");
+  if (!canvas || typeof Chart === "undefined") return;
+
+  if (state.charts.expenseChart) {
+    state.charts.expenseChart.destroy();
+    state.charts.expenseChart = null;
+  }
+
+  const expenses = entries.filter((e) => e.type === "expense");
+  if (!expenses.length) {
+    // nothing to show
+    return;
+  }
+
+  const categoryMap = new Map();
+  expenses.forEach((e) => {
+    const cat = (e.category || "Uncategorized").trim() || "Uncategorized";
+    const amt = Number(e.amount) || 0;
+    categoryMap.set(cat, (categoryMap.get(cat) || 0) + amt);
+  });
+
+  const labels = Array.from(categoryMap.keys());
+  const data = Array.from(categoryMap.values());
+
+  const ctx = canvas.getContext("2d");
+  state.charts.expenseChart = new Chart(ctx, {
+    type: "pie",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "Expenses by category",
+          data
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: "right" }
+      }
+    }
+  });
+}
+
+/* Recent entries in current range */
+
+function renderReportsRecentList(rangeEntries) {
+  const list = document.getElementById("reportsRecentList");
   if (!list) return;
 
-  const sorted = entries.slice().sort(sortByDateDesc);
-  const top = sorted.slice(0, 10);
+  const sorted = rangeEntries.slice().sort(sortByDateDesc);
+  const top = sorted.slice(0, 12);
 
   list.innerHTML = "";
-  if (top.length === 0) {
+  if (!top.length) {
     const li = document.createElement("li");
     li.className = "recent-list__empty";
-    li.textContent = "No entries yet.";
+    li.textContent = "No entries in this period.";
     list.appendChild(li);
     return;
   }
@@ -657,28 +915,38 @@ function renderRecentEntries(entries) {
     li.innerHTML = `
       <div class="recent-list__main">
         <span class="recent-list__date">${formatShortDate(d)} (${e.date})</span>
-        <span class="recent-list__amount">${sign}${formatCurrency(e.amount)}</span>
+        <span class="recent-list__amount">${sign}₹${formatCurrency(e.amount)}</span>
       </div>
       <div class="recent-list__meta">
-        <span class="recent-list__type">${e.type}</span>
-        <span class="recent-list__category">${e.category || ""}</span>
-        <span class="recent-list__note">${e.note || ""}</span>
+        <span>${e.type === "income" ? "Collection" : "Expense"}</span>
+        <span>${e.category || ""}</span>
+        <span>${e.paymentMode || ""}</span>
+        <span>${e.note || ""}</span>
       </div>
     `;
     list.appendChild(li);
   });
 }
 
-/* ALL RECORDS TABLE (VIEW / EDIT / DELETE) */
+/* ============================
+ * ALL RECORDS TABLE
+ * ============================ */
 
-function renderEntriesTable() {
-  const tbody = document.getElementById("entriesTableBody");
+function renderDataTable() {
+  const tbody = document.getElementById("dataTableBody");
+  const countLabel = document.getElementById("dataCountLabel");
   if (!tbody) return;
 
   const all = state.data.entries || [];
-  const fromStr = document.getElementById("dataFromDate").value || null;
-  const toStr = document.getElementById("dataToDate").value || null;
-  const typeFilter = document.getElementById("dataTypeFilter").value || "";
+
+  const fromStr = document.getElementById("dataFrom")?.value || null;
+  const toStr = document.getElementById("dataTo")?.value || null;
+  const typeFilter = document.getElementById("dataTypeFilter")?.value || "";
+  const catFilterRaw =
+    document.getElementById("dataCategoryFilter")?.value.trim().toLowerCase() ||
+    "";
+  const searchRaw =
+    document.getElementById("dataSearch")?.value.trim().toLowerCase() || "";
 
   let filtered = filterEntriesByDateRange(all, fromStr, toStr);
 
@@ -686,22 +954,39 @@ function renderEntriesTable() {
     filtered = filtered.filter((e) => e.type === typeFilter);
   }
 
-  const sorted = filtered.slice().sort(sortByDateDesc);
+  if (catFilterRaw) {
+    filtered = filtered.filter((e) =>
+      (e.category || "").toLowerCase().includes(catFilterRaw)
+    );
+  }
+
+  if (searchRaw) {
+    filtered = filtered.filter((e) =>
+      (e.note || "").toLowerCase().includes(searchRaw)
+    );
+  }
+
+  filtered.sort(sortByDateDesc);
 
   tbody.innerHTML = "";
 
-  if (!sorted.length) {
+  if (countLabel) {
+    countLabel.textContent = `${filtered.length} record${
+      filtered.length === 1 ? "" : "s"
+    }`;
+  }
+
+  if (!filtered.length) {
     const tr = document.createElement("tr");
     const td = document.createElement("td");
-    td.colSpan = 6;
+    td.colSpan = 7;
     td.textContent = "No records for this filter.";
-    td.style.color = "var(--text-muted)";
     tr.appendChild(td);
     tbody.appendChild(tr);
     return;
   }
 
-  sorted.forEach((e) => {
+  filtered.forEach((e) => {
     const tr = document.createElement("tr");
 
     const dateTd = document.createElement("td");
@@ -711,7 +996,7 @@ function renderEntriesTable() {
     const typeTd = document.createElement("td");
     const badge = document.createElement("span");
     badge.className = "data-badge";
-    badge.textContent = e.type === "income" ? "Income" : "Expense";
+    badge.textContent = e.type === "income" ? "Collection" : "Expense";
     typeTd.appendChild(badge);
 
     const catTd = document.createElement("td");
@@ -719,7 +1004,10 @@ function renderEntriesTable() {
 
     const amtTd = document.createElement("td");
     const sign = e.type === "income" ? "+" : "−";
-    amtTd.textContent = `${sign}${formatCurrency(e.amount)}`;
+    amtTd.textContent = `${sign}₹${formatCurrency(e.amount)}`;
+
+    const modeTd = document.createElement("td");
+    modeTd.textContent = e.paymentMode || "";
 
     const noteTd = document.createElement("td");
     noteTd.textContent = e.note || "";
@@ -748,6 +1036,7 @@ function renderEntriesTable() {
     tr.appendChild(typeTd);
     tr.appendChild(catTd);
     tr.appendChild(amtTd);
+    tr.appendChild(modeTd);
     tr.appendChild(noteTd);
     tr.appendChild(actionsTd);
 
@@ -755,14 +1044,41 @@ function renderEntriesTable() {
   });
 }
 
-/* REMINDERS (MISSING DAYS) */
+/* ============================
+ * CATEGORY DATALIST
+ * ============================ */
 
-function renderReminders(entries) {
+function updateCategoryDatalist() {
+  const datalist = document.getElementById("categorySuggestions");
+  if (!datalist) return;
+
+  const seen = new Set();
+  datalist.innerHTML = "";
+
+  (state.data.entries || []).forEach((e) => {
+    const raw = (e.category || "").trim();
+    if (!raw) return;
+    const lower = raw.toLowerCase();
+    if (seen.has(lower)) return;
+    seen.add(lower);
+    const option = document.createElement("option");
+    option.value = raw;
+    datalist.appendChild(option);
+  });
+}
+
+/* ============================
+ * REMINDERS (MISSING DAYS)
+ * ============================ */
+
+function renderReminderBanner() {
   const banner = document.getElementById("reminderBanner");
   if (!banner) return;
 
+  const entries = state.data.entries || [];
   const missing = findMissingDays(entries, 7);
-  if (missing.length === 0) {
+
+  if (!missing.length) {
     banner.classList.add("reminder-banner--hidden");
     banner.textContent = "";
     return;
@@ -776,12 +1092,14 @@ function renderReminders(entries) {
     .join(", ");
 
   banner.classList.remove("reminder-banner--hidden");
-  banner.innerHTML = `<strong>Reminder:</strong> No records for ${humanList}. Use the date picker when adding records to fill these days.`;
+  banner.innerHTML = `<strong>Reminder:</strong> No records for ${humanList}. Use the date picker when adding records or mark closed days.`;
 }
 
 function findMissingDays(entries, lookbackDays) {
   const set = new Set(entries.map((e) => e.date));
-  const closed = Array.isArray(state.data.closedDays) ? state.data.closedDays : [];
+  const closed = Array.isArray(state.data.closedDays)
+    ? state.data.closedDays
+    : [];
   const closedSet = new Set(closed);
 
   const missing = [];
@@ -800,7 +1118,29 @@ function findMissingDays(entries, lookbackDays) {
   return missing;
 }
 
-/* DATE HELPERS */
+/* ============================
+ * EXPORT JSON BACKUP
+ * ============================ */
+
+function exportJsonBackup() {
+  const dataStr = JSON.stringify(state.data, null, 2);
+  const blob = new Blob([dataStr], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "acexpenso_backup.json";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+
+  showToast("Exported JSON backup.");
+}
+
+/* ============================
+ * DATE HELPERS
+ * ============================ */
 
 function parseISODate(str) {
   if (!str) return new Date(NaN);
@@ -814,22 +1154,6 @@ function toISODate(d) {
   return `${year}-${month}-${day}`;
 }
 
-function isSameDay(a, b) {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
-}
-
-function isSameMonth(a, b) {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
-}
-
-function isSameYear(a, b) {
-  return a.getFullYear() === b.getFullYear();
-}
-
 function getWeekStart(date) {
   const d = new Date(date);
   const day = d.getDay(); // 0 = Sunday
@@ -839,8 +1163,12 @@ function getWeekStart(date) {
   return d;
 }
 
-function isSameWeek(a, b) {
-  return getWeekStart(a).getTime() === getWeekStart(b).getTime();
+function getWeekEnd(date) {
+  const start = getWeekStart(date);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  end.setHours(0, 0, 0, 0);
+  return end;
 }
 
 const MONTHS_SHORT = [
@@ -863,6 +1191,7 @@ function getMonthShortName(i) {
 }
 
 function formatShortDate(d) {
+  if (!(d instanceof Date) || Number.isNaN(d.getTime())) return "";
   const day = String(d.getDate()).padStart(2, "0");
   const month = getMonthShortName(d.getMonth());
   return `${day} ${month}`;
@@ -888,7 +1217,9 @@ function formatCurrency(amount) {
   });
 }
 
-/* TOAST & LOADER */
+/* ============================
+ * TOAST & LOADER & DRIVE STATUS
+ * ============================ */
 
 function showToast(message, isError) {
   const el = document.getElementById("toast");
@@ -912,7 +1243,40 @@ function showLoading(show) {
   el.classList.toggle("loading-overlay--hidden", !show);
 }
 
-/* PWA */
+function updateDriveStatusUI(forceText) {
+  const pill = document.getElementById("driveStatus");
+  const signInBtn = document.getElementById("signInBtn");
+  const signOutBtn = document.getElementById("signOutBtn");
+  if (!pill) return;
+
+  if (forceText) {
+    pill.textContent = forceText;
+    return;
+  }
+
+  let hasToken = false;
+  try {
+    if (typeof gapi !== "undefined" && gapi.client && gapi.client.getToken) {
+      hasToken = !!gapi.client.getToken();
+    }
+  } catch (_) {
+    hasToken = false;
+  }
+
+  if (hasToken) {
+    pill.textContent = "Online · syncing with Google Drive";
+    if (signInBtn) signInBtn.style.display = "none";
+    if (signOutBtn) signOutBtn.style.display = "inline-flex";
+  } else {
+    pill.textContent = "Offline · local-only mode";
+    if (signInBtn) signInBtn.style.display = "inline-flex";
+    if (signOutBtn) signOutBtn.style.display = "none";
+  }
+}
+
+/* ============================
+ * PWA
+ * ============================ */
 
 function initPWA() {
   if ("serviceWorker" in navigator) {
@@ -922,18 +1286,25 @@ function initPWA() {
   }
 }
 
-/* DATA PERSISTENCE WRAPPERS */
+/* ============================
+ * DATA SAVE WRAPPER
+ * ============================ */
 
 async function persistData(successMessage) {
   try {
     showLoading(true);
     await saveExpenseData(state.data);
-    renderAll();
     if (successMessage) showToast(successMessage);
   } catch (err) {
     console.error("Error saving data to Drive", err);
-    showToast("Could not save to Drive. See console for details.", true);
+    const msg =
+      err && err.message && err.message.includes("Not signed in")
+        ? "Saved locally only. Sign in to sync with Drive."
+        : "Could not save to Google Drive. Data saved locally.";
+    showToast(msg, true);
   } finally {
     showLoading(false);
+    renderAll();
+    updateDriveStatusUI();
   }
 }
