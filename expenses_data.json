@@ -1,0 +1,21 @@
+{
+  "settings": {
+    "businessName": "ACube Xerox",
+    "currency": "INR",
+    "pinHash": "..."       
+  },
+  "entries": [
+    {
+      "id": "2025-11-25_1732559845123",
+      "date": "2025-11-25",
+      "type": "income",    
+      "category": "Xerox",
+      "amount": 450,
+      "note": "Walk-in copies"
+    }
+  ],
+  "closedDays": [
+    "2025-11-25",
+    "2025-11-24"
+  ]
+}

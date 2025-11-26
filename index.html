@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ACube Xerox Finance Tracker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Theme color for PWA -->
+  <meta name="theme-color" content="#050816" />
+
+  <!-- PWA manifest -->
+  <link rel="manifest" href="manifest.json" />
+
+  <!-- Fonts: creative but still formal -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Chart.js for reports -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    :root {
+      --bg-main: #050816;
+      --bg-panel: rgba(10, 15, 25, 0.95);
+      --bg-panel-light: #ffffff;
+      --accent: #5f9bff;
+      --accent-soft: rgba(95, 155, 255, 0.15);
+      --text-main: #e9ecf6;
+      --text-muted: #98a0b8;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --shadow-soft: 0 18px 40px rgba(0, 0, 0, 0.4);
+      --radius-xl: 20px;
+      --radius-lg: 14px;
+      --radius-pill: 999px;
+      --transition-fast: 150ms ease-out;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, #1e293b 0, transparent 55%),
+        radial-gradient(circle at bottom right, #020617 0, #000000 65%);
+      color: var(--text-main);
+    }
+
+    .app {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 16px;
+      gap: 16px;
+    }
+
+    .app--light {
+      background: linear-gradient(135deg, #f7fafc, #e2e8f0);
+      color: #111827;
+    }
+
+    .app--light .panel {
+      background: var(--bg-panel-light);
+      color: #111827;
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    }
+
+    .app--dark .panel {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-subtle);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
+      border-radius: var(--radius-xl);
+      background: linear-gradient(120deg, #020617, #0b1120, #020617);
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.9);
+      gap: 16px;
+    }
+
+    .app--light .top-bar {
+      background: linear-gradient(120deg, #0f172a, #1f2937);
+      color: #f9fafb;
+    }
+
+    .brand h1 {
+      margin: 0 0 4px;
+      font-family: "Manrope", system-ui, sans-serif;
+      letter-spacing: 0.02em;
+      font-size: 1.2rem;
+    }
+
+    .brand p {
+      margin: 0;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .top-bar__controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .button {
+      border-radius: var(--radius-pill);
+      padding: 8px 16px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 500;
+      font-family: inherit;
+      white-space: nowrap;
+      transition: background-color var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
+    }
+
+    .button--primary {
+      background: var(--accent);
+      color: #0b1020;
+      box-shadow: 0 10px 25px rgba(95, 155, 255, 0.45);
+    }
+
+    .button--primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 14px 30px rgba(95, 155, 255, 0.6);
+    }
+
+    .button--secondary {
+      background: transparent;
+      border-color: var(--accent-soft);
+      color: var(--accent);
+      backdrop-filter: blur(10px);
+    }
+
+    .button--ghost {
+      background: transparent;
+      border-color: rgba(148, 163, 184, 0.6);
+      color: inherit;
+    }
+
+    .button:active {
+      transform: translateY(0);
+      box-shadow: none;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 2fr) minmax(0, 1.2fr);
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .panel {
+      border-radius: var(--radius-xl);
+      padding: 16px 18px 18px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .panel__header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .panel__header h2 {
+      margin: 0;
+      font-size: 1.05rem;
+      font-family: "Manrope", system-ui, sans-serif;
+    }
+
+    .panel__sub {
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 1px dashed rgba(148, 163, 184, 0.4);
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .summary-card {
+      border-radius: var(--radius-lg);
+      padding: 10px 12px;
+      background: radial-gradient(circle at top left, var(--accent-soft), transparent 60%);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      font-size: 0.78rem;
+    }
+
+    .summary-card__label {
+      font-family: "Manrope", system-ui, sans-serif;
+      font-weight: 600;
+      margin-bottom: 4px;
+      font-size: 0.78rem;
+    }
+
+    .summary-card__row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .summary-card__row span:first-child {
+      color: var(--text-muted);
+    }
+
+    .summary-card__row--emphasis span:last-child {
+      font-weight: 600;
+    }
+
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: flex-end;
+      margin-bottom: 12px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 0.8rem;
+      min-width: 120px;
+    }
+
+    .field label {
+      color: var(--text-muted);
+    }
+
+    input[type="date"],
+    input[type="number"],
+    input[type="text"],
+    input[type="password"],
+    textarea,
+    select {
+      border-radius: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      background: rgba(15, 23, 42, 0.65);
+      color: inherit;
+      padding: 6px 8px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
+    }
+
+    .app--light input[type="date"],
+    .app--light input[type="number"],
+    .app--light input[type="text"],
+    .app--light input[type="password"],
+    .app--light textarea,
+    .app--light select {
+      background: #f9fafb;
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(95, 155, 255, 0.5);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 60px;
+    }
+
+    .select {
+      min-width: 120px;
+    }
+
+    .range-summary {
+      font-size: 0.88rem;
+      margin-bottom: 10px;
+    }
+
+    .range-summary h3 {
+      margin: 0 0 4px;
+      font-size: 0.86rem;
+    }
+
+    .range-summary p {
+      margin: 0;
+      color: var(--text-muted);
+    }
+
+    .chart-container {
+      height: 220px;
+      padding: 8px 6px 4px;
+      border-radius: var(--radius-lg);
+      border: 1px dashed rgba(148, 163, 184, 0.45);
+      margin-bottom: 14px;
+      background: radial-gradient(circle at top, rgba(15, 23, 42, 0.8), transparent 70%);
+    }
+
+    .recent-table h3 {
+      margin: 0 0 6px;
+      font-size: 0.9rem;
+    }
+
+    .recent-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      max-height: 210px;
+      overflow: auto;
+      font-size: 0.8rem;
+    }
+
+    .recent-list__item {
+      padding: 6px 4px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .recent-list__main {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .recent-list__date {
+      color: var(--text-muted);
+    }
+
+    .recent-list__amount {
+      font-weight: 600;
+    }
+
+    .recent-list__meta {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      color: var(--text-muted);
+    }
+
+    .recent-list__empty {
+      padding: 6px 0;
+      color: var(--text-muted);
+    }
+
+    .form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      font-size: 0.85rem;
+    }
+
+    .form--inline {
+      flex-direction: row;
+      flex-wrap: wrap;
+    }
+
+    .form--inline .field {
+      flex: 1 1 150px;
+    }
+
+    .reminder-banner {
+      border-radius: var(--radius-xl);
+      padding: 8px 12px;
+      background: rgba(220, 38, 38, 0.07);
+      border: 1px solid rgba(248, 113, 113, 0.5);
+      font-size: 0.82rem;
+      color: #fecaca;
+    }
+
+    .app--light .reminder-banner {
+      color: #7f1d1d;
+      background: #fee2e2;
+      border-color: #fecaca;
+    }
+
+    .reminder-banner strong {
+      font-weight: 600;
+      margin-right: 4px;
+    }
+
+    .reminder-banner--hidden {
+      display: none;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 20px;
+      transform: translateX(-50%);
+      padding: 8px 14px;
+      border-radius: var(--radius-pill);
+      font-size: 0.8rem;
+      background: rgba(15, 23, 42, 0.9);
+      color: #e5e7eb;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.7);
+      opacity: 1;
+      transition: opacity 160ms ease-out, transform 160ms ease-out;
+      z-index: 40;
+    }
+
+    .toast--error {
+      background: rgba(127, 29, 29, 0.95);
+      border-color: rgba(248, 113, 113, 0.9);
+    }
+
+    .toast--hidden {
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, 6px);
+    }
+
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.7);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      gap: 10px;
+      font-size: 0.85rem;
+      z-index: 50;
+      backdrop-filter: blur(4px);
+    }
+
+    .loading-overlay--hidden {
+      display: none;
+    }
+
+    .spinner {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: 3px solid rgba(148, 163, 184, 0.6);
+      border-top-color: var(--accent);
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @media (max-width: 960px) {
+      .layout {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .top-bar {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .top-bar__controls {
+        width: 100%;
+        justify-content: space-between;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .summary-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .panel {
+        padding-inline: 12px;
+      }
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+      }
+      .top-bar__controls,
+      #entryView,
+      #toast,
+      #loadingOverlay {
+        display: none !important;
+      }
+      .panel {
+        box-shadow: none;
+        border: 1px solid #e5e7eb;
+      }
+      .layout {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .summary-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+      .chart-container {
+        height: 260px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app" class="app app--dark">
+    <header class="top-bar">
+      <div class="brand">
+        <h1>ACube Xerox Finance Tracker</h1>
+        <p>Daily income, expenses and profit at a glance</p>
+      </div>
+      <div class="top-bar__controls">
+        <button id="themeToggle" class="button button--ghost" type="button">Light mode</button>
+        <button id="printReportBtn" class="button button--primary" type="button">Print report</button>
+        <button onclick="driveSignIn()">Sign in</button>
+<button onclick="driveSignOut()">Sign out</button>
+
+      </div>
+    </header>
+
+    <section id="reminderBanner" class="reminder-banner reminder-banner--hidden"></section>
+
+    <main class="layout">
+      <!-- REPORTS / LANDING -->
+      <section class="panel" id="reportsView">
+        <div class="panel__header">
+          <h2>Reports</h2>
+          <select id="chartModeSelect" class="select">
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly" selected>Monthly</option>
+            <option value="quarterly">Quarterly</option>
+            <option value="yearly">Yearly</option>
+          </select>
+        </div>
+
+        <div class="summary-grid">
+          <div class="summary-card" id="todaySummary">
+            <div class="summary-card__label">Today</div>
+            <div class="summary-card__row">
+              <span>Income</span><span class="summary-card__income">0.00</span>
+            </div>
+            <div class="summary-card__row">
+              <span>Expenses</span><span class="summary-card__expense">0.00</span>
+            </div>
+            <div class="summary-card__row summary-card__row--emphasis">
+              <span>Profit</span><span class="summary-card__profit">0.00</span>
+            </div>
+          </div>
+
+          <div class="summary-card" id="weekSummary">
+            <div class="summary-card__label">This week</div>
+            <div class="summary-card__row">
+              <span>Income</span><span class="summary-card__income">0.00</span>
+            </div>
+            <div class="summary-card__row">
+              <span>Expenses</span><span class="summary-card__expense">0.00</span>
+            </div>
+            <div class="summary-card__row summary-card__row--emphasis">
+              <span>Profit</span><span class="summary-card__profit">0.00</span>
+            </div>
+          </div>
+
+          <div class="summary-card" id="monthSummary">
+            <div class="summary-card__label">This month</div>
+            <div class="summary-card__row">
+              <span>Income</span><span class="summary-card__income">0.00</span>
+            </div>
+            <div class="summary-card__row">
+              <span>Expenses</span><span class="summary-card__expense">0.00</span>
+            </div>
+            <div class="summary-card__row summary-card__row--emphasis">
+              <span>Profit</span><span class="summary-card__profit">0.00</span>
+            </div>
+          </div>
+
+          <div class="summary-card" id="yearSummary">
+            <div class="summary-card__label">This year</div>
+            <div class="summary-card__row">
+              <span>Income</span><span class="summary-card__income">0.00</span>
+            </div>
+            <div class="summary-card__row">
+              <span>Expenses</span><span class="summary-card__expense">0.00</span>
+            </div>
+            <div class="summary-card__row summary-card__row--emphasis">
+              <span>Profit</span><span class="summary-card__profit">0.00</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="filters">
+          <div class="field">
+            <label for="fromDate">From</label>
+            <input type="date" id="fromDate">
+          </div>
+          <div class="field">
+            <label for="toDate">To</label>
+            <input type="date" id="toDate">
+          </div>
+          <button id="applyRangeBtn" class="button button--secondary" type="button">Apply range</button>
+        </div>
+
+        <div class="range-summary">
+          <h3 id="rangeTitle">All time</h3>
+          <p id="rangeTotals">Income: 0.00, Expenses: 0.00, Profit: 0.00</p>
+        </div>
+
+        <div class="chart-container">
+          <canvas id="profitChart"></canvas>
+        </div>
+
+        <div class="recent-table">
+          <h3>Recent entries (last 10)</h3>
+          <ul id="recentEntriesList" class="recent-list"></ul>
+        </div>
+      </section>
+
+      <!-- ENTRY + SETTINGS -->
+      <section class="panel" id="entryView">
+        <div class="panel__header">
+          <h2>Add / update records</h2>
+        </div>
+
+        <form id="entryForm" class="form">
+          <div class="field">
+            <label for="entryDate">Date</label>
+            <input type="date" id="entryDate" required>
+          </div>
+
+          <div class="field">
+            <label for="entryType">Type</label>
+            <select id="entryType" required>
+              <option value="income">Income</option>
+              <option value="expense">Expense</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="entryCategory">Category</label>
+            <input type="text" id="entryCategory" placeholder="Xerox, Printing, Paper, Rent..." />
+          </div>
+
+          <div class="field">
+            <label for="entryAmount">Amount</label>
+            <input type="number" step="0.01" min="0" id="entryAmount" required />
+          </div>
+
+          <div class="field">
+            <label for="entryNote">Note</label>
+            <textarea id="entryNote" placeholder="Short note (optional)"></textarea>
+          </div>
+
+          <div>
+            <button type="submit" class="button button--primary">Save record (PIN protected)</button>
+          </div>
+        </form>
+
+        <section class="panel__sub">
+          <h3>Day closing</h3>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0;">
+            After entering everything for a day, mark it as closed. Missing-day reminders will ignore closed days.
+          </p>
+          <div class="form">
+            <div class="field">
+              <label for="closeDayDate">Day to close</label>
+              <input type="date" id="closeDayDate">
+            </div>
+            <button id="closeDayBtn" class="button button--secondary" type="button">Mark day as closed</button>
+          </div>
+        </section>
+
+        <section class="panel__sub" id="settingsView">
+          <h3>Security (PIN)</h3>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0;">
+            Default PIN is 2807 the first time. You can update it here.
+          </p>
+          <form id="pinForm" class="form form--inline">
+            <div class="field">
+              <label for="currentPin">Current PIN</label>
+              <input type="password" id="currentPin" autocomplete="off">
+            </div>
+            <div class="field">
+              <label for="newPin">New PIN</label>
+              <input type="password" id="newPin" autocomplete="off">
+            </div>
+            <div class="field">
+              <label for="confirmNewPin">Confirm new PIN</label>
+              <input type="password" id="confirmNewPin" autocomplete="off">
+            </div>
+            <button type="submit" class="button button--ghost">Update PIN</button>
+          </form>
+        </section>
+      </section>
+    </main>
+
+    <div id="loadingOverlay" class="loading-overlay loading-overlay--hidden">
+      <div class="spinner"></div>
+      <p>Syncing with Google Drive…</p>
+    </div>
+
+    <div id="toast" class="toast toast--hidden"></div>
+  </div>
+
+  <script src="drive-client.js"></script>
+  <script src="app.js"></script>
+  <script
+  src="https://apis.google.com/js/api.js"
+  async
+  defer
+  onload="gapiLoaded()"
+></script>
+<script
+  src="https://accounts.google.com/gsi/client"
+  async
+  defer
+  onload="gisLoaded()"
+></script>
+</body>
+</html>
