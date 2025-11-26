@@ -109,6 +109,7 @@ function switchView(viewId) {
   });
 
   if (viewId === "view-add") {
+    // For direct "Add record" navigation we reset the form in "new" mode
     prepareAddFormForNew();
     renderReminderBanner();
   } else if (viewId === "view-data") {
@@ -178,7 +179,10 @@ async function bootstrapData() {
     renderAll();
   } catch (err) {
     console.error("Error loading data from Drive", err);
-    showToast("Could not load data from Drive. Using local backup if available.", true);
+    showToast(
+      "Could not load data from Drive. Using local backup if available.",
+      true
+    );
   } finally {
     showLoading(false);
     updateDriveStatusUI();
@@ -289,7 +293,9 @@ function initEventHandlers() {
       state.ui.chartMetric = metric;
       document
         .querySelectorAll(".chart-metric-btn")
-        .forEach((b) => b.classList.toggle("chart-metric-btn--active", b === btn));
+        .forEach((b) =>
+          b.classList.toggle("chart-metric-btn--active", b === btn)
+        );
       renderReports();
     });
   }
@@ -458,6 +464,12 @@ async function onEntrySubmit(event) {
   if (closedCheckbox) closedCheckbox.checked = false;
 }
 
+/**
+ * EDIT FLOW FIX:
+ * - Show the Add view first (which resets to "new" mode),
+ * - then set editingEntryId and overwrite the form fields.
+ * - on submit, onEntrySubmit sees editingEntryId and updates instead of adding.
+ */
 function startEditEntry(entryId) {
   const entry = state.data.entries.find((e) => e.id === entryId);
   if (!entry) {
@@ -465,6 +477,10 @@ function startEditEntry(entryId) {
     return;
   }
 
+  // First switch to Add view so the form & layout are visible
+  switchView("view-add");
+
+  // Now mark this as an edit
   state.ui.editingEntryId = entryId;
 
   const date = document.getElementById("entryDate");
@@ -482,8 +498,6 @@ function startEditEntry(entryId) {
   if (paymentMode) paymentMode.value = entry.paymentMode || "";
   if (note) note.value = entry.note || "";
   if (closedCheckbox) closedCheckbox.checked = false;
-
-  switchView("view-add");
 }
 
 /* DELETE ENTRY */
@@ -657,9 +671,12 @@ function renderReports() {
   const totalProfitEl = document.getElementById("summaryTotalProfit");
   const entryCountEl = document.getElementById("summaryEntryCount");
 
-  if (totalIncomeEl) totalIncomeEl.textContent = "₹" + formatCurrency(summary.income);
-  if (totalExpenseEl) totalExpenseEl.textContent = "₹" + formatCurrency(summary.expense);
-  if (totalProfitEl) totalProfitEl.textContent = "₹" + formatCurrency(summary.profit);
+  if (totalIncomeEl)
+    totalIncomeEl.textContent = "₹" + formatCurrency(summary.income);
+  if (totalExpenseEl)
+    totalExpenseEl.textContent = "₹" + formatCurrency(summary.expense);
+  if (totalProfitEl)
+    totalProfitEl.textContent = "₹" + formatCurrency(summary.profit);
   if (entryCountEl) entryCountEl.textContent = String(rangeEntries.length);
 
   const rangeTitleEl = document.getElementById("rangeTitle");
@@ -1265,7 +1282,7 @@ function updateDriveStatusUI(forceText) {
 
   if (hasToken) {
     pill.textContent = "Online · syncing with Google Drive";
-    if (signInBtn) signInBtn.style.display = "none";
+    if (signInBtn) signInBtn.style.display = "inline-flex";
     if (signOutBtn) signOutBtn.style.display = "inline-flex";
   } else {
     pill.textContent = "Offline · local-only mode";
