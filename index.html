@@ -4,20 +4,32 @@
   <meta charset="UTF-8" />
   <title>ACube Xerox Finance Tracker</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-  <!-- Theme color for PWA -->
   <meta name="theme-color" content="#050816" />
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
 
-  <!-- Fonts: creative but still formal -->
+  <!-- Fonts: formal but slightly creative -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
 
   <!-- Chart.js for reports -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Google APIs (same pattern as your journal app) -->
+  <script
+    src="https://apis.google.com/js/api.js"
+    async
+    defer
+    onload="gapiLoaded()"
+  ></script>
+  <script
+    src="https://accounts.google.com/gsi/client"
+    async
+    defer
+    onload="gisLoaded()"
+  ></script>
 
   <style>
     :root {
@@ -26,6 +38,7 @@
       --bg-panel-light: #ffffff;
       --accent: #5f9bff;
       --accent-soft: rgba(95, 155, 255, 0.15);
+      --accent-strong: #f97316;
       --text-main: #e9ecf6;
       --text-muted: #98a0b8;
       --border-subtle: rgba(255, 255, 255, 0.08);
@@ -92,22 +105,46 @@
       color: #f9fafb;
     }
 
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-logo {
+      width: 36px;
+      height: 36px;
+      border-radius: 999px;
+      background: conic-gradient(from 160deg, #5f9bff, #f97316, #22c55e, #5f9bff);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.6);
+    }
+
+    .brand-logo span {
+      font-family: "Manrope", system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: #f9fafb;
+    }
+
     .brand h1 {
       margin: 0 0 4px;
       font-family: "Manrope", system-ui, sans-serif;
-      letter-spacing: 0.02em;
-      font-size: 1.2rem;
+      letter-spacing: 0.03em;
+      font-size: 1.1rem;
     }
 
     .brand p {
       margin: 0;
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       color: var(--text-muted);
     }
 
     .top-bar__controls {
       display: flex;
-      gap: 10px;
+      gap: 8px;
       align-items: center;
       flex-wrap: wrap;
       justify-content: flex-end;
@@ -115,10 +152,10 @@
 
     .button {
       border-radius: var(--radius-pill);
-      padding: 8px 16px;
+      padding: 8px 14px;
       border: 1px solid transparent;
       cursor: pointer;
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       font-weight: 500;
       font-family: inherit;
       white-space: nowrap;
@@ -154,11 +191,102 @@
       box-shadow: none;
     }
 
-    .layout {
-      display: grid;
-      grid-template-columns: minmax(0, 2fr) minmax(0, 1.2fr);
+    /* Shell: sidebar + main content */
+    .shell {
+      display: flex;
       gap: 16px;
       align-items: flex-start;
+      min-height: calc(100vh - 100px);
+    }
+
+    .sidebar {
+      width: 230px;
+      flex-shrink: 0;
+      border-radius: var(--radius-xl);
+      padding: 12px 12px 14px;
+      background: rgba(10, 15, 25, 0.96);
+      border: 1px solid var(--border-subtle);
+      box-shadow: var(--shadow-soft);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: transform 0.2s ease, opacity 0.2s ease;
+    }
+
+    .app--light .sidebar {
+      background: #f9fafb;
+      border-color: #e5e7eb;
+      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.1);
+    }
+
+    .sidebar--hidden {
+      transform: translateX(-14px);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .sidebar__title {
+      font-size: 0.78rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .sidebar__subtitle {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .sidebar-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .sidebar-nav__item {
+      border-radius: 12px;
+      border: 1px solid transparent;
+      padding: 7px 10px;
+      font-size: 0.85rem;
+      text-align: left;
+      background: transparent;
+      color: var(--text-main);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .sidebar-nav__item:hover {
+      background: rgba(148, 163, 184, 0.24);
+      border-color: rgba(148, 163, 184, 0.7);
+    }
+
+    .sidebar-nav__item--active {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      box-shadow: 0 8px 22px rgba(95, 155, 255, 0.25);
+    }
+
+    .sidebar-nav__item span {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .view {
+      display: none;
+    }
+
+    .view--active {
+      display: block;
     }
 
     .panel {
@@ -182,10 +310,16 @@
       font-family: "Manrope", system-ui, sans-serif;
     }
 
-    .panel__sub {
-      margin-top: 18px;
-      padding-top: 16px;
-      border-top: 1px dashed rgba(148, 163, 184, 0.4);
+    .panel__subheading {
+      margin: 0;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .panel__section-title {
+      margin: 10px 0 6px;
+      font-size: 0.9rem;
+      font-weight: 600;
     }
 
     .summary-grid {
@@ -237,7 +371,7 @@
       flex-direction: column;
       gap: 4px;
       font-size: 0.8rem;
-      min-width: 120px;
+      min-width: 140px;
     }
 
     .field label {
@@ -280,10 +414,6 @@
     textarea {
       resize: vertical;
       min-height: 60px;
-    }
-
-    .select {
-      min-width: 120px;
     }
 
     .range-summary {
@@ -365,13 +495,46 @@
       font-size: 0.85rem;
     }
 
-    .form--inline {
-      flex-direction: row;
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+    }
+
+    .data-table thead {
+      background: rgba(15, 23, 42, 0.7);
+    }
+
+    .app--light .data-table thead {
+      background: #f3f4f6;
+    }
+
+    .data-table th,
+    .data-table td {
+      padding: 6px 8px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.4);
+      text-align: left;
+    }
+
+    .data-table th {
+      font-weight: 600;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .data-table__actions {
+      display: flex;
+      gap: 6px;
       flex-wrap: wrap;
     }
 
-    .form--inline .field {
-      flex: 1 1 150px;
+    .data-badge {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      border: 1px solid rgba(148, 163, 184, 0.65);
+      color: var(--text-muted);
     }
 
     .reminder-banner {
@@ -454,25 +617,23 @@
     }
 
     @keyframes spin {
-      to {
-        transform: rotate(360deg);
-      }
+      to { transform: rotate(360deg); }
     }
 
     @media (max-width: 960px) {
-      .layout {
-        grid-template-columns: minmax(0, 1fr);
+      .shell {
+        flex-direction: column;
       }
-
+      .sidebar {
+        width: 100%;
+      }
       .summary-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
-
       .top-bar {
         flex-direction: column;
         align-items: flex-start;
       }
-
       .top-bar__controls {
         width: 100%;
         justify-content: space-between;
@@ -483,7 +644,6 @@
       .summary-grid {
         grid-template-columns: minmax(0, 1fr);
       }
-
       .panel {
         padding-inline: 12px;
       }
@@ -493,18 +653,24 @@
       body {
         background: #ffffff;
       }
-      .top-bar__controls,
-      #entryView,
+      #sidebarToggle,
+      .sidebar,
+      #view-add,
+      #view-data,
+      #view-settings,
       #toast,
       #loadingOverlay {
         display: none !important;
       }
+      .view {
+        display: none !important;
+      }
+      #view-reports {
+        display: block !important;
+      }
       .panel {
         box-shadow: none;
         border: 1px solid #e5e7eb;
-      }
-      .layout {
-        grid-template-columns: minmax(0, 1fr);
       }
       .summary-grid {
         grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -519,192 +685,296 @@
   <div id="app" class="app app--dark">
     <header class="top-bar">
       <div class="brand">
-        <h1>ACube Xerox Finance Tracker</h1>
-        <p>Daily income, expenses and profit at a glance</p>
+        <div class="brand-logo"><span>AX</span></div>
+        <div>
+          <h1>ACube Xerox Finance</h1>
+          <p>Track income, expenses & profit with clarity</p>
+        </div>
       </div>
       <div class="top-bar__controls">
+        <button id="sidebarToggle" class="button button--ghost" type="button">Menu</button>
         <button id="themeToggle" class="button button--ghost" type="button">Light mode</button>
         <button id="printReportBtn" class="button button--primary" type="button">Print report</button>
-        <button onclick="driveSignIn()">Sign in</button>
-<button onclick="driveSignOut()">Sign out</button>
-
       </div>
     </header>
 
     <section id="reminderBanner" class="reminder-banner reminder-banner--hidden"></section>
 
-    <main class="layout">
-      <!-- REPORTS / LANDING -->
-      <section class="panel" id="reportsView">
-        <div class="panel__header">
-          <h2>Reports</h2>
-          <select id="chartModeSelect" class="select">
-            <option value="daily">Daily</option>
-            <option value="weekly">Weekly</option>
-            <option value="monthly" selected>Monthly</option>
-            <option value="quarterly">Quarterly</option>
-            <option value="yearly">Yearly</option>
-          </select>
+    <div class="shell">
+      <!-- SIDEBAR NAV -->
+      <aside id="sidebar" class="sidebar">
+        <div>
+          <div class="sidebar__title">Navigation</div>
+          <div class="sidebar__subtitle">Jump between key actions</div>
         </div>
+        <nav class="sidebar-nav">
+          <button class="sidebar-nav__item sidebar-nav__item--active" data-view="reports">
+            Dashboard / reports
+            <span>summary & charts</span>
+          </button>
+          <button class="sidebar-nav__item" data-view="add">
+            Add record
+            <span>income / expense</span>
+          </button>
+          <button class="sidebar-nav__item" data-view="data">
+            All records
+            <span>view · edit · delete</span>
+          </button>
+          <button class="sidebar-nav__item" data-view="settings">
+            Settings & PIN
+            <span>security · day closing</span>
+          </button>
+        </nav>
+      </aside>
 
-        <div class="summary-grid">
-          <div class="summary-card" id="todaySummary">
-            <div class="summary-card__label">Today</div>
-            <div class="summary-card__row">
-              <span>Income</span><span class="summary-card__income">0.00</span>
+      <!-- MAIN CONTENT -->
+      <main class="main">
+        <!-- REPORTS VIEW (landing) -->
+        <section id="view-reports" class="view view--active">
+          <section class="panel" id="reportsView">
+            <div class="panel__header">
+              <div>
+                <h2>Reports</h2>
+                <p class="panel__subheading">
+                  See daily, weekly, monthly and yearly profit – plus custom ranges.
+                </p>
+              </div>
+              <select id="chartModeSelect" class="select">
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly" selected>Monthly</option>
+                <option value="quarterly">Quarterly</option>
+                <option value="yearly">Yearly</option>
+              </select>
             </div>
-            <div class="summary-card__row">
-              <span>Expenses</span><span class="summary-card__expense">0.00</span>
+
+            <div class="summary-grid">
+              <div class="summary-card" id="todaySummary">
+                <div class="summary-card__label">Today</div>
+                <div class="summary-card__row">
+                  <span>Income</span><span class="summary-card__income">0.00</span>
+                </div>
+                <div class="summary-card__row">
+                  <span>Expenses</span><span class="summary-card__expense">0.00</span>
+                </div>
+                <div class="summary-card__row summary-card__row--emphasis">
+                  <span>Profit</span><span class="summary-card__profit">0.00</span>
+                </div>
+              </div>
+
+              <div class="summary-card" id="weekSummary">
+                <div class="summary-card__label">This week</div>
+                <div class="summary-card__row">
+                  <span>Income</span><span class="summary-card__income">0.00</span>
+                </div>
+                <div class="summary-card__row">
+                  <span>Expenses</span><span class="summary-card__expense">0.00</span>
+                </div>
+                <div class="summary-card__row summary-card__row--emphasis">
+                  <span>Profit</span><span class="summary-card__profit">0.00</span>
+                </div>
+              </div>
+
+              <div class="summary-card" id="monthSummary">
+                <div class="summary-card__label">This month</div>
+                <div class="summary-card__row">
+                  <span>Income</span><span class="summary-card__income">0.00</span>
+                </div>
+                <div class="summary-card__row">
+                  <span>Expenses</span><span class="summary-card__expense">0.00</span>
+                </div>
+                <div class="summary-card__row summary-card__row--emphasis">
+                  <span>Profit</span><span class="summary-card__profit">0.00</span>
+                </div>
+              </div>
+
+              <div class="summary-card" id="yearSummary">
+                <div class="summary-card__label">This year</div>
+                <div class="summary-card__row">
+                  <span>Income</span><span class="summary-card__income">0.00</span>
+                </div>
+                <div class="summary-card__row">
+                  <span>Expenses</span><span class="summary-card__expense">0.00</span>
+                </div>
+                <div class="summary-card__row summary-card__row--emphasis">
+                  <span>Profit</span><span class="summary-card__profit">0.00</span>
+                </div>
+              </div>
             </div>
-            <div class="summary-card__row summary-card__row--emphasis">
-              <span>Profit</span><span class="summary-card__profit">0.00</span>
+
+            <div class="filters">
+              <div class="field">
+                <label for="fromDate">From</label>
+                <input type="date" id="fromDate">
+              </div>
+              <div class="field">
+                <label for="toDate">To</label>
+                <input type="date" id="toDate">
+              </div>
+              <button id="applyRangeBtn" class="button button--secondary" type="button">Apply range</button>
             </div>
-          </div>
 
-          <div class="summary-card" id="weekSummary">
-            <div class="summary-card__label">This week</div>
-            <div class="summary-card__row">
-              <span>Income</span><span class="summary-card__income">0.00</span>
+            <div class="range-summary">
+              <h3 id="rangeTitle">All time</h3>
+              <p id="rangeTotals">Income: 0.00, Expenses: 0.00, Profit: 0.00</p>
             </div>
-            <div class="summary-card__row">
-              <span>Expenses</span><span class="summary-card__expense">0.00</span>
+
+            <div class="chart-container">
+              <canvas id="profitChart"></canvas>
             </div>
-            <div class="summary-card__row summary-card__row--emphasis">
-              <span>Profit</span><span class="summary-card__profit">0.00</span>
+
+            <div class="recent-table">
+              <h3>Recent entries (last 10)</h3>
+              <ul id="recentEntriesList" class="recent-list"></ul>
             </div>
-          </div>
-
-          <div class="summary-card" id="monthSummary">
-            <div class="summary-card__label">This month</div>
-            <div class="summary-card__row">
-              <span>Income</span><span class="summary-card__income">0.00</span>
-            </div>
-            <div class="summary-card__row">
-              <span>Expenses</span><span class="summary-card__expense">0.00</span>
-            </div>
-            <div class="summary-card__row summary-card__row--emphasis">
-              <span>Profit</span><span class="summary-card__profit">0.00</span>
-            </div>
-          </div>
-
-          <div class="summary-card" id="yearSummary">
-            <div class="summary-card__label">This year</div>
-            <div class="summary-card__row">
-              <span>Income</span><span class="summary-card__income">0.00</span>
-            </div>
-            <div class="summary-card__row">
-              <span>Expenses</span><span class="summary-card__expense">0.00</span>
-            </div>
-            <div class="summary-card__row summary-card__row--emphasis">
-              <span>Profit</span><span class="summary-card__profit">0.00</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="filters">
-          <div class="field">
-            <label for="fromDate">From</label>
-            <input type="date" id="fromDate">
-          </div>
-          <div class="field">
-            <label for="toDate">To</label>
-            <input type="date" id="toDate">
-          </div>
-          <button id="applyRangeBtn" class="button button--secondary" type="button">Apply range</button>
-        </div>
-
-        <div class="range-summary">
-          <h3 id="rangeTitle">All time</h3>
-          <p id="rangeTotals">Income: 0.00, Expenses: 0.00, Profit: 0.00</p>
-        </div>
-
-        <div class="chart-container">
-          <canvas id="profitChart"></canvas>
-        </div>
-
-        <div class="recent-table">
-          <h3>Recent entries (last 10)</h3>
-          <ul id="recentEntriesList" class="recent-list"></ul>
-        </div>
-      </section>
-
-      <!-- ENTRY + SETTINGS -->
-      <section class="panel" id="entryView">
-        <div class="panel__header">
-          <h2>Add / update records</h2>
-        </div>
-
-        <form id="entryForm" class="form">
-          <div class="field">
-            <label for="entryDate">Date</label>
-            <input type="date" id="entryDate" required>
-          </div>
-
-          <div class="field">
-            <label for="entryType">Type</label>
-            <select id="entryType" required>
-              <option value="income">Income</option>
-              <option value="expense">Expense</option>
-            </select>
-          </div>
-
-          <div class="field">
-            <label for="entryCategory">Category</label>
-            <input type="text" id="entryCategory" placeholder="Xerox, Printing, Paper, Rent..." />
-          </div>
-
-          <div class="field">
-            <label for="entryAmount">Amount</label>
-            <input type="number" step="0.01" min="0" id="entryAmount" required />
-          </div>
-
-          <div class="field">
-            <label for="entryNote">Note</label>
-            <textarea id="entryNote" placeholder="Short note (optional)"></textarea>
-          </div>
-
-          <div>
-            <button type="submit" class="button button--primary">Save record (PIN protected)</button>
-          </div>
-        </form>
-
-        <section class="panel__sub">
-          <h3>Day closing</h3>
-          <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0;">
-            After entering everything for a day, mark it as closed. Missing-day reminders will ignore closed days.
-          </p>
-          <div class="form">
-            <div class="field">
-              <label for="closeDayDate">Day to close</label>
-              <input type="date" id="closeDayDate">
-            </div>
-            <button id="closeDayBtn" class="button button--secondary" type="button">Mark day as closed</button>
-          </div>
+          </section>
         </section>
 
-        <section class="panel__sub" id="settingsView">
-          <h3>Security (PIN)</h3>
-          <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0;">
-            Default PIN is 2807 the first time. You can update it here.
-          </p>
-          <form id="pinForm" class="form form--inline">
-            <div class="field">
-              <label for="currentPin">Current PIN</label>
-              <input type="password" id="currentPin" autocomplete="off">
+        <!-- ADD RECORD VIEW -->
+        <section id="view-add" class="view">
+          <section class="panel">
+            <div class="panel__header">
+              <div>
+                <h2>Add / update record</h2>
+                <p class="panel__subheading">
+                  Use the date picker if you forgot to enter previous days.
+                </p>
+              </div>
             </div>
-            <div class="field">
-              <label for="newPin">New PIN</label>
-              <input type="password" id="newPin" autocomplete="off">
-            </div>
-            <div class="field">
-              <label for="confirmNewPin">Confirm new PIN</label>
-              <input type="password" id="confirmNewPin" autocomplete="off">
-            </div>
-            <button type="submit" class="button button--ghost">Update PIN</button>
-          </form>
+
+            <form id="entryForm" class="form">
+              <div class="field">
+                <label for="entryDate">Date</label>
+                <input type="date" id="entryDate" required>
+              </div>
+
+              <div class="field">
+                <label for="entryType">Type</label>
+                <select id="entryType" required>
+                  <option value="income">Income</option>
+                  <option value="expense">Expense</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="entryCategory">Category</label>
+                <input type="text" id="entryCategory" placeholder="Xerox, printing, paper, rent..." />
+              </div>
+
+              <div class="field">
+                <label for="entryAmount">Amount</label>
+                <input type="number" step="0.01" min="0" id="entryAmount" required />
+              </div>
+
+              <div class="field">
+                <label for="entryNote">Note</label>
+                <textarea id="entryNote" placeholder="Short note (optional)"></textarea>
+              </div>
+
+              <div>
+                <button type="submit" class="button button--primary">Save record (PIN protected)</button>
+              </div>
+            </form>
+          </section>
         </section>
-      </section>
-    </main>
+
+        <!-- ALL RECORDS VIEW (view / edit / delete) -->
+        <section id="view-data" class="view">
+          <section class="panel">
+            <div class="panel__header">
+              <div>
+                <h2>All records</h2>
+                <p class="panel__subheading">
+                  Browse, edit or delete entries. Use filters to narrow down.
+                </p>
+              </div>
+            </div>
+
+            <div class="filters">
+              <div class="field">
+                <label for="dataFromDate">From date</label>
+                <input type="date" id="dataFromDate">
+              </div>
+              <div class="field">
+                <label for="dataToDate">To date</label>
+                <input type="date" id="dataToDate">
+              </div>
+              <div class="field">
+                <label for="dataTypeFilter">Type</label>
+                <select id="dataTypeFilter">
+                  <option value="">All</option>
+                  <option value="income">Income</option>
+                  <option value="expense">Expense</option>
+                </select>
+              </div>
+              <button id="dataFilterBtn" class="button button--secondary" type="button">Apply</button>
+            </div>
+
+            <div style="overflow-x:auto; max-height:340px;">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Category</th>
+                    <th>Amount</th>
+                    <th>Note</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="entriesTableBody"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <!-- SETTINGS VIEW (PIN + day closing) -->
+        <section id="view-settings" class="view">
+          <section class="panel">
+            <div class="panel__header">
+              <div>
+                <h2>Settings & PIN</h2>
+                <p class="panel__subheading">
+                  Secure your data and mark days as closed so reminders stay accurate.
+                </p>
+              </div>
+            </div>
+
+            <h3 class="panel__section-title">Day closing</h3>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0;">
+              After entering everything for a day, mark it as closed. Missing-day reminders will ignore closed days.
+            </p>
+            <div class="form">
+              <div class="field">
+                <label for="closeDayDate">Day to close</label>
+                <input type="date" id="closeDayDate">
+              </div>
+              <button id="closeDayBtn" class="button button--secondary" type="button">Mark day as closed</button>
+            </div>
+
+            <h3 class="panel__section-title" style="margin-top: 18px;">Security (PIN)</h3>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0;">
+              Default PIN is 2807 the first time. Updating it protects all modifications.
+            </p>
+            <form id="pinForm" class="form" style="max-width: 420px;">
+              <div class="field">
+                <label for="currentPin">Current PIN</label>
+                <input type="password" id="currentPin" autocomplete="off">
+              </div>
+              <div class="field">
+                <label for="newPin">New PIN</label>
+                <input type="password" id="newPin" autocomplete="off">
+              </div>
+              <div class="field">
+                <label for="confirmNewPin">Confirm new PIN</label>
+                <input type="password" id="confirmNewPin" autocomplete="off">
+              </div>
+              <button type="submit" class="button button--ghost">Update PIN</button>
+            </form>
+          </section>
+        </section>
+      </main>
+    </div>
 
     <div id="loadingOverlay" class="loading-overlay loading-overlay--hidden">
       <div class="spinner"></div>
@@ -716,17 +986,5 @@
 
   <script src="drive-client.js"></script>
   <script src="app.js"></script>
-  <script
-  src="https://apis.google.com/js/api.js"
-  async
-  defer
-  onload="gapiLoaded()"
-></script>
-<script
-  src="https://accounts.google.com/gsi/client"
-  async
-  defer
-  onload="gisLoaded()"
-></script>
 </body>
 </html>

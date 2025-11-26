@@ -13,11 +13,16 @@ const state = {
   currentRange: {
     from: null,
     to: null
+  },
+  ui: {
+    activeView: "reports",
+    editingEntryId: null
   }
 };
 
 document.addEventListener("DOMContentLoaded", () => {
   initTheme();
+  initViewNavigation();
   initEvents();
   initPWA();
   loadInitialData();
@@ -33,7 +38,9 @@ function initTheme() {
   const toggleBtn = document.getElementById("themeToggle");
   if (toggleBtn) {
     toggleBtn.addEventListener("click", () => {
-      const current = document.getElementById("app").classList.contains("app--dark")
+      const current = document
+        .getElementById("app")
+        .classList.contains("app--dark")
         ? "dark"
         : "light";
       const next = current === "dark" ? "light" : "dark";
@@ -55,6 +62,56 @@ function setTheme(theme) {
   }
 }
 
+/* VIEW NAVIGATION (SIDEBAR) */
+
+function initViewNavigation() {
+  const sidebar = document.getElementById("sidebar");
+  const sidebarToggle = document.getElementById("sidebarToggle");
+  const navButtons = document.querySelectorAll(".sidebar-nav__item");
+
+  if (sidebarToggle && sidebar) {
+    sidebarToggle.addEventListener("click", () => {
+      sidebar.classList.toggle("sidebar--hidden");
+    });
+  }
+
+  navButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const view = btn.dataset.view || "reports";
+      switchView(view);
+
+      navButtons.forEach((b) =>
+        b.classList.toggle(
+          "sidebar-nav__item--active",
+          b === btn
+        )
+      );
+
+      if (window.innerWidth <= 960 && sidebar) {
+        sidebar.classList.add("sidebar--hidden");
+      }
+    });
+  });
+
+  // Default view
+  switchView("reports");
+}
+
+function switchView(view) {
+  state.ui.activeView = view;
+
+  document.querySelectorAll(".view").forEach((el) => {
+    el.classList.toggle(
+      "view--active",
+      el.id === `view-${view}`
+    );
+  });
+
+  if (view === "add") {
+    prepareAddFormForNew();
+  }
+}
+
 /* INITIAL LOAD */
 
 async function loadInitialData() {
@@ -69,8 +126,6 @@ async function loadInitialData() {
     if (!Array.isArray(data.closedDays)) data.closedDays = [];
 
     state.data = data;
-
-    // Ensure PIN exists; if not, seed from DEFAULT_PIN
     await ensurePinHashExists();
 
     initDefaultDates();
@@ -88,6 +143,30 @@ async function ensurePinHashExists() {
   const hash = await hashPin(DEFAULT_PIN);
   state.data.settings.pinHash = hash;
   await saveExpenseData(state.data);
+}
+
+function initDefaultDates() {
+  const today = new Date();
+  const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+  const fromInput = document.getElementById("fromDate");
+  const toInput = document.getElementById("toDate");
+  const entryDate = document.getElementById("entryDate");
+  const closeDayDate = document.getElementById("closeDayDate");
+  const dataFromDate = document.getElementById("dataFromDate");
+  const dataToDate = document.getElementById("dataToDate");
+
+  const todayISO = toISODate(today);
+  const firstISO = toISODate(firstOfMonth);
+
+  if (fromInput) fromInput.value = firstISO;
+  if (toInput) toInput.value = todayISO;
+  if (entryDate) entryDate.value = todayISO;
+  if (closeDayDate) closeDayDate.value = todayISO;
+  if (dataFromDate) dataFromDate.value = firstISO;
+  if (dataToDate) dataToDate.value = todayISO;
+
+  state.currentRange = { from: firstISO, to: todayISO };
 }
 
 /* EVENTS */
@@ -134,29 +213,34 @@ function initEvents() {
       renderChart(entries);
     });
   }
-}
 
-function initDefaultDates() {
-  const today = new Date();
-  const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-
-  const fromInput = document.getElementById("fromDate");
-  const toInput = document.getElementById("toDate");
-  const entryDate = document.getElementById("entryDate");
-  const closeDayDate = document.getElementById("closeDayDate");
-
-  const todayISO = toISODate(today);
-  const firstISO = toISODate(firstOfMonth);
-
-  if (fromInput) fromInput.value = firstISO;
-  if (toInput) toInput.value = todayISO;
-  if (entryDate) entryDate.value = todayISO;
-  if (closeDayDate) closeDayDate.value = todayISO;
-
-  state.currentRange = { from: firstISO, to: todayISO };
+  const dataFilterBtn = document.getElementById("dataFilterBtn");
+  if (dataFilterBtn) {
+    dataFilterBtn.addEventListener("click", () => {
+      renderEntriesTable();
+    });
+  }
 }
 
 /* ENTRY HANDLING */
+
+function prepareAddFormForNew() {
+  state.ui.editingEntryId = null;
+  const entryDate = document.getElementById("entryDate");
+  if (entryDate) {
+    if (!entryDate.value) {
+      entryDate.value = toISODate(new Date());
+    }
+  }
+  const type = document.getElementById("entryType");
+  const category = document.getElementById("entryCategory");
+  const amount = document.getElementById("entryAmount");
+  const note = document.getElementById("entryNote");
+  if (type) type.value = "income";
+  if (category) category.value = "";
+  if (amount) amount.value = "";
+  if (note) note.value = "";
+}
 
 async function onEntrySubmit(event) {
   event.preventDefault();
@@ -182,22 +266,76 @@ async function onEntrySubmit(event) {
   if (!ok) return;
 
   const now = new Date();
-  const id = `${dateStr}_${now.getTime()}`;
+  const editingId = state.ui.editingEntryId;
 
-  state.data.entries.push({
-    id,
-    date: dateStr,
-    type,
-    category,
-    amount,
-    note
-  });
+  if (editingId) {
+    // Update existing entry
+    const entry = state.data.entries.find((e) => e.id === editingId);
+    if (entry) {
+      entry.date = dateStr;
+      entry.type = type;
+      entry.category = category;
+      entry.amount = amount;
+      entry.note = note;
+    }
+    state.ui.editingEntryId = null;
+  } else {
+    // Create new entry
+    const id = `${dateStr}_${now.getTime()}`;
+    state.data.entries.push({
+      id,
+      date: dateStr,
+      type,
+      category,
+      amount,
+      note
+    });
+  }
 
   await persistData("Record saved.");
-  // Keep date as selected so it is easy to add multiple entries for same day
+
+  // Keep same date; clear amount & note for quick multiple entries
   document.getElementById("entryAmount").value = "";
   document.getElementById("entryNote").value = "";
 }
+
+/* EDIT / DELETE */
+
+function startEditEntry(entryId) {
+  const entry = state.data.entries.find((e) => e.id === entryId);
+  if (!entry) {
+    showToast("Record not found.", true);
+    return;
+  }
+
+  state.ui.editingEntryId = entryId;
+  const date = document.getElementById("entryDate");
+  const type = document.getElementById("entryType");
+  const category = document.getElementById("entryCategory");
+  const amount = document.getElementById("entryAmount");
+  const note = document.getElementById("entryNote");
+
+  if (date) date.value = entry.date;
+  if (type) type.value = entry.type;
+  if (category) category.value = entry.category || "";
+  if (amount) amount.value = entry.amount;
+  if (note) note.value = entry.note || "";
+
+  switchView("add");
+}
+
+async function onDeleteEntry(entryId) {
+  const okAuth = await ensureAuthenticated();
+  if (!okAuth) return;
+
+  const confirmDelete = window.confirm("Delete this record permanently?");
+  if (!confirmDelete) return;
+
+  state.data.entries = state.data.entries.filter((e) => e.id !== entryId);
+  await persistData("Record deleted.");
+}
+
+/* PIN AND AUTH */
 
 async function onPinFormSubmit(event) {
   event.preventDefault();
@@ -233,6 +371,35 @@ async function onPinFormSubmit(event) {
   await persistData("PIN updated.");
 }
 
+async function ensureAuthenticated() {
+  if (state.authenticated) return true;
+  const pin = window.prompt("Enter PIN to modify records:");
+  if (pin == null) return false;
+  const ok = await verifyPin(pin);
+  if (!ok) {
+    showToast("Incorrect PIN.", true);
+    return false;
+  }
+  state.authenticated = true;
+  showToast("PIN accepted.");
+  return true;
+}
+
+async function hashPin(pin) {
+  const enc = new TextEncoder().encode(pin);
+  const buf = await crypto.subtle.digest("SHA-256", enc);
+  const arr = Array.from(new Uint8Array(buf));
+  return arr.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function verifyPin(pin) {
+  if (!state.data.settings || !state.data.settings.pinHash) return false;
+  const hash = await hashPin(pin);
+  return hash === state.data.settings.pinHash;
+}
+
+/* DAY CLOSING */
+
 async function onCloseDay() {
   const dateStr = document.getElementById("closeDayDate").value;
   if (!dateStr) {
@@ -253,49 +420,29 @@ async function onCloseDay() {
   await persistData(`Marked ${dateStr} as closed.`);
 }
 
-/* PIN AND AUTH */
-
-async function ensureAuthenticated() {
-  if (state.authenticated) return true;
-  const pin = window.prompt("Enter PIN to modify records:");
-  if (pin == null) return false;
-  const ok = await verifyPin(pin);
-  if (!ok) {
-    showToast("Incorrect PIN.", true);
-    return false;
-  }
-  state.authenticated = true;
-  showToast("PIN accepted.");
-  return true;
-}
-
-async function hashPin(pin) {
-  const enc = new TextEncoder().encode(pin);
-  const buf = await crypto.subtle.digest("SHA-256", enc);
-  const arr = Array.from(new Uint8Array(buf));
-  return arr.map(b => b.toString(16).padStart(2, "0")).join("");
-}
-
-async function verifyPin(pin) {
-  if (!state.data.settings || !state.data.settings.pinHash) return false;
-  const hash = await hashPin(pin);
-  return hash === state.data.settings.pinHash;
-}
-
 /* REPORTING */
 
 function renderAll() {
   renderReports();
+  renderEntriesTable();
 }
 
 function renderReports() {
   const entries = state.data.entries || [];
   const today = new Date();
 
-  const todayEntries = entries.filter(e => isSameDay(parseISODate(e.date), today));
-  const weekEntries = entries.filter(e => isSameWeek(parseISODate(e.date), today));
-  const monthEntries = entries.filter(e => isSameMonth(parseISODate(e.date), today));
-  const yearEntries = entries.filter(e => isSameYear(parseISODate(e.date), today));
+  const todayEntries = entries.filter((e) =>
+    isSameDay(parseISODate(e.date), today)
+  );
+  const weekEntries = entries.filter((e) =>
+    isSameWeek(parseISODate(e.date), today)
+  );
+  const monthEntries = entries.filter((e) =>
+    isSameMonth(parseISODate(e.date), today)
+  );
+  const yearEntries = entries.filter((e) =>
+    isSameYear(parseISODate(e.date), today)
+  );
 
   updateSummaryCard("todaySummary", "Today", computeSummary(todayEntries));
   updateSummaryCard("weekSummary", "This week", computeSummary(weekEntries));
@@ -365,7 +512,7 @@ function filterEntriesByDateRange(entries, fromStr, toStr) {
   const to = toStr ? parseISODate(toStr) : null;
 
   return entries
-    .filter(e => {
+    .filter((e) => {
       const d = parseISODate(e.date);
       if (Number.isNaN(d.getTime())) return false;
       if (from && d < from) return false;
@@ -390,8 +537,8 @@ function renderChart(entries) {
   const mode = modeSelect ? modeSelect.value : "monthly";
 
   const grouped = groupEntriesByMode(entries, mode);
-  const labels = grouped.map(g => g.label);
-  const profits = grouped.map(g => g.profit);
+  const labels = grouped.map((g) => g.label);
+  const profits = grouped.map((g) => g.profit);
 
   const ctx = canvas.getContext("2d");
   state.chart = new Chart(ctx, {
@@ -420,7 +567,7 @@ function renderChart(entries) {
 function groupEntriesByMode(entries, mode) {
   const map = new Map();
 
-  entries.forEach(entry => {
+  entries.forEach((entry) => {
     const d = parseISODate(entry.date);
     if (Number.isNaN(d.getTime())) return;
 
@@ -452,7 +599,6 @@ function groupEntriesByMode(entries, mode) {
       const yearStart = new Date(year, 0, 1);
       sortValue = yearStart.getTime();
     } else {
-      // monthly default
       const monthIndex = month + 1;
       key = `${year}-${String(monthIndex).padStart(2, "0")}`;
       label = `${getMonthShortName(month)} ${year}`;
@@ -502,7 +648,7 @@ function renderRecentEntries(entries) {
     return;
   }
 
-  top.forEach(e => {
+  top.forEach((e) => {
     const d = parseISODate(e.date);
     const li = document.createElement("li");
     li.className = "recent-list__item";
@@ -523,6 +669,92 @@ function renderRecentEntries(entries) {
   });
 }
 
+/* ALL RECORDS TABLE (VIEW / EDIT / DELETE) */
+
+function renderEntriesTable() {
+  const tbody = document.getElementById("entriesTableBody");
+  if (!tbody) return;
+
+  const all = state.data.entries || [];
+  const fromStr = document.getElementById("dataFromDate").value || null;
+  const toStr = document.getElementById("dataToDate").value || null;
+  const typeFilter = document.getElementById("dataTypeFilter").value || "";
+
+  let filtered = filterEntriesByDateRange(all, fromStr, toStr);
+
+  if (typeFilter) {
+    filtered = filtered.filter((e) => e.type === typeFilter);
+  }
+
+  const sorted = filtered.slice().sort(sortByDateDesc);
+
+  tbody.innerHTML = "";
+
+  if (!sorted.length) {
+    const tr = document.createElement("tr");
+    const td = document.createElement("td");
+    td.colSpan = 6;
+    td.textContent = "No records for this filter.";
+    td.style.color = "var(--text-muted)";
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+    return;
+  }
+
+  sorted.forEach((e) => {
+    const tr = document.createElement("tr");
+
+    const dateTd = document.createElement("td");
+    const d = parseISODate(e.date);
+    dateTd.textContent = `${formatShortDate(d)} (${e.date})`;
+
+    const typeTd = document.createElement("td");
+    const badge = document.createElement("span");
+    badge.className = "data-badge";
+    badge.textContent = e.type === "income" ? "Income" : "Expense";
+    typeTd.appendChild(badge);
+
+    const catTd = document.createElement("td");
+    catTd.textContent = e.category || "";
+
+    const amtTd = document.createElement("td");
+    const sign = e.type === "income" ? "+" : "−";
+    amtTd.textContent = `${sign}${formatCurrency(e.amount)}`;
+
+    const noteTd = document.createElement("td");
+    noteTd.textContent = e.note || "";
+
+    const actionsTd = document.createElement("td");
+    actionsTd.className = "data-table__actions";
+
+    const editBtn = document.createElement("button");
+    editBtn.type = "button";
+    editBtn.className = "button button--ghost";
+    editBtn.style.fontSize = "0.75rem";
+    editBtn.textContent = "Edit";
+    editBtn.addEventListener("click", () => startEditEntry(e.id));
+
+    const delBtn = document.createElement("button");
+    delBtn.type = "button";
+    delBtn.className = "button button--secondary";
+    delBtn.style.fontSize = "0.75rem";
+    delBtn.textContent = "Delete";
+    delBtn.addEventListener("click", () => onDeleteEntry(e.id));
+
+    actionsTd.appendChild(editBtn);
+    actionsTd.appendChild(delBtn);
+
+    tr.appendChild(dateTd);
+    tr.appendChild(typeTd);
+    tr.appendChild(catTd);
+    tr.appendChild(amtTd);
+    tr.appendChild(noteTd);
+    tr.appendChild(actionsTd);
+
+    tbody.appendChild(tr);
+  });
+}
+
 /* REMINDERS (MISSING DAYS) */
 
 function renderReminders(entries) {
@@ -537,7 +769,7 @@ function renderReminders(entries) {
   }
 
   const humanList = missing
-    .map(dateStr => {
+    .map((dateStr) => {
       const d = parseISODate(dateStr);
       return `${formatShortDate(d)} (${dateStr})`;
     })
@@ -548,7 +780,7 @@ function renderReminders(entries) {
 }
 
 function findMissingDays(entries, lookbackDays) {
-  const set = new Set(entries.map(e => e.date));
+  const set = new Set(entries.map((e) => e.date));
   const closed = Array.isArray(state.data.closedDays) ? state.data.closedDays : [];
   const closedSet = new Set(closed);
 
@@ -568,7 +800,7 @@ function findMissingDays(entries, lookbackDays) {
   return missing;
 }
 
-/* HELPERS: DATES, SORTING, FORMAT */
+/* DATE HELPERS */
 
 function parseISODate(str) {
   if (!str) return new Date(NaN);
@@ -611,7 +843,20 @@ function isSameWeek(a, b) {
   return getWeekStart(a).getTime() === getWeekStart(b).getTime();
 }
 
-const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTHS_SHORT = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec"
+];
 
 function getMonthShortName(i) {
   return MONTHS_SHORT[i] || "";
@@ -643,7 +888,7 @@ function formatCurrency(amount) {
   });
 }
 
-/* TOAST AND LOADER */
+/* TOAST & LOADER */
 
 function showToast(message, isError) {
   const el = document.getElementById("toast");
@@ -667,17 +912,17 @@ function showLoading(show) {
   el.classList.toggle("loading-overlay--hidden", !show);
 }
 
-/* PWA REGISTRATION */
+/* PWA */
 
 function initPWA() {
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker
       .register("service-worker.js")
-      .catch(err => console.error("Service worker registration failed", err));
+      .catch((err) => console.error("Service worker registration failed", err));
   }
 }
 
-/* DATA PERSISTENCE (wrappers over Drive) */
+/* DATA PERSISTENCE WRAPPERS */
 
 async function persistData(successMessage) {
   try {
