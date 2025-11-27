@@ -2,1360 +2,27 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>ACexpenso – ACube Xerox Finance</title>
+  <title>ACexpenso – ACube Xerox Accounting</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#020617" />
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
 
-  <!-- Icons (update paths/names as needed) -->
-  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+  <!-- Icons (adjust paths to your actual icons) -->
+  <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
 
-  <!-- Google Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <!-- Fonts -->
   <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Manrope:wght@500;600;700&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
     rel="stylesheet"
   />
 
-  <style>
-    :root {
-      --color-bg: #f3f4f6;
-      --color-bg-dark: #020617;
-      --color-sidebar-bg: #111827;
-      --color-sidebar-border: #1f2937;
-      --color-card-bg: #ffffff;
-      --color-card-bg-dark: #020617;
-      --color-border: #e5e7eb;
-      --color-border-dark: #1f2937;
-      --color-accent: #2563eb;
-      --color-accent-soft: rgba(37, 99, 235, 0.08);
-      --color-text: #111827;
-      --color-text-muted: #6b7280;
-      --color-text-dark: #e5e7eb;
-      --color-text-muted-dark: #9ca3af;
-      --radius-xl: 18px;
-      --radius-lg: 12px;
-      --radius-pill: 999px;
-      --shadow-soft: 0 10px 30px rgba(15, 23, 42, 0.15);
-      --shadow-strong: 0 14px 45px rgba(15, 23, 42, 0.35);
-      --transition-fast: 150ms ease-out;
-    }
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
-
-    /* APP SHELL */
-
-    .app {
-      min-height: 100vh;
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      background: var(--color-bg);
-      color: var(--color-text);
-    }
-
-    .app--dark {
-      background: radial-gradient(circle at top, #020617, #020617 55%, #000000 100%);
-      color: var(--color-text-dark);
-    }
-
-    .app--light {
-      background: linear-gradient(135deg, #f9fafb, #e5e7eb);
-      color: var(--color-text);
-    }
-
-    /* TOP BAR */
-
-    .top-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      padding: 12px 16px;
-      border-radius: var(--radius-xl);
-      background: #ffffff;
-      box-shadow: var(--shadow-soft);
-    }
-
-    .app--dark .top-bar {
-      background: #020617;
-      border: 1px solid #111827;
-      box-shadow: var(--shadow-strong);
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .brand-logo {
-      width: 36px;
-      height: 36px;
-      border-radius: 999px;
-      background: #1f2937;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #f9fafb;
-      font-family: "Manrope", system-ui, sans-serif;
-      font-weight: 700;
-      font-size: 0.9rem;
-    }
-
-    .brand h1 {
-      margin: 0;
-      font-family: "Manrope", system-ui, sans-serif;
-      font-size: 1.1rem;
-    }
-
-    .brand p {
-      margin: 2px 0 0;
-      font-size: 0.8rem;
-      color: var(--color-text-muted);
-    }
-
-    .app--dark .brand p {
-      color: var(--color-text-muted-dark);
-    }
-
-    .top-bar__controls {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    /* BUTTONS */
-
-    .button {
-      border-radius: var(--radius-pill);
-      padding: 7px 14px;
-      border: 1px solid transparent;
-      cursor: pointer;
-      font-size: 0.82rem;
-      font-family: inherit;
-      font-weight: 500;
-      white-space: nowrap;
-      transition: background-color var(--transition-fast),
-        border-color var(--transition-fast),
-        color var(--transition-fast),
-        box-shadow var(--transition-fast),
-        transform var(--transition-fast);
-    }
-
-    .button--primary {
-      background: var(--color-accent);
-      color: #ffffff;
-      box-shadow: 0 8px 20px rgba(37, 99, 235, 0.35);
-    }
-
-    .button--primary:hover {
-      box-shadow: 0 10px 25px rgba(37, 99, 235, 0.45);
-      transform: translateY(-1px);
-    }
-
-    .button--secondary {
-      background: var(--color-accent-soft);
-      color: var(--color-accent);
-      border-color: transparent;
-    }
-
-    .button--secondary:hover {
-      background: rgba(37, 99, 235, 0.16);
-    }
-
-    .button--ghost {
-      background: transparent;
-      border-color: #d1d5db;
-      color: inherit;
-    }
-
-    .app--dark .button--ghost {
-      border-color: #4b5563;
-    }
-
-    .button:active {
-      transform: translateY(0);
-      box-shadow: none;
-    }
-
-    .status-pill {
-      font-size: 0.75rem;
-      padding: 4px 10px;
-      border-radius: var(--radius-pill);
-      background: #f3f4f6;
-      border: 1px solid #e5e7eb;
-      color: var(--color-text-muted);
-    }
-
-    .app--dark .status-pill {
-      background: #020617;
-      border-color: #4b5563;
-      color: var(--color-text-muted-dark);
-    }
-
-    /* LAYOUT: SIDEBAR + MAIN */
-
-    .shell {
-      display: flex;
-      gap: 16px;
-      align-items: flex-start;
-      min-height: calc(100vh - 100px);
-    }
-
-    /* SIDEBAR */
-
-    .sidebar {
-      width: 230px;
-      flex-shrink: 0;
-      border-radius: var(--radius-xl);
-      padding: 12px;
-      background: var(--color-sidebar-bg);
-      border: 1px solid var(--color-sidebar-border);
-      color: var(--color-text-dark);
-      box-shadow: var(--shadow-strong);
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      transition: transform 0.2s ease, opacity 0.2s ease;
-    }
-
-    .app--light .sidebar {
-      background: #111827;
-      border-color: #111827;
-    }
-
-    .sidebar--hidden {
-      transform: translateX(-14px);
-      display: none;
-      pointer-events: none;
-    }
-
-    .sidebar__title {
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.14em;
-      color: #9ca3af;
-    }
-
-    .sidebar__subtitle {
-      font-size: 0.78rem;
-      color: #9ca3af;
-    }
-
-    .sidebar-nav {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      margin-top: 8px;
-    }
-
-    .sidebar-nav__item {
-      border-radius: 12px;
-      padding: 7px 10px;
-      border: 1px solid transparent;
-      background: transparent;
-      color: inherit;
-      text-align: left;
-      cursor: pointer;
-      font-size: 0.86rem;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .sidebar-nav__item span {
-      font-size: 0.72rem;
-      color: #9ca3af;
-    }
-
-    .sidebar-nav__item:hover {
-      background: rgba(55, 65, 81, 0.8);
-    }
-
-    .sidebar-nav__item--active {
-      background: #1d4ed8;
-      border-color: #1d4ed8;
-    }
-
-    /* MAIN */
-
-    .main {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    /* PANELS / VIEWS */
-
-    .view {
-      display: none;
-    }
-
-    .view--active {
-      display: block;
-    }
-
-    .panel {
-      border-radius: var(--radius-xl);
-      padding: 16px 18px 18px;
-      background: var(--color-card-bg);
-      border: 1px solid var(--color-border);
-      box-shadow: var(--shadow-soft);
-    }
-
-    .app--dark .panel {
-      background: var(--color-card-bg-dark);
-      border-color: var(--color-border-dark);
-    }
-
-    .panel__header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 8px;
-      margin-bottom: 12px;
-    }
-
-    .panel__header h2 {
-      margin: 0;
-      font-family: "Manrope", system-ui, sans-serif;
-      font-size: 1.05rem;
-    }
-
-    .panel__subheading {
-      margin: 4px 0 0;
-      font-size: 0.8rem;
-      color: var(--color-text-muted);
-    }
-
-    .app--dark .panel__subheading {
-      color: var(--color-text-muted-dark);
-    }
-
-    .panel__section-title {
-      margin: 12px 0 6px;
-      font-size: 0.9rem;
-      font-weight: 600;
-    }
-
-    /* SUMMARY CARDS */
-
-    .summary-grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 10px;
-      margin-bottom: 14px;
-    }
-
-    .summary-card {
-      border-radius: var(--radius-lg);
-      padding: 10px 12px;
-      border: 1px solid #e5e7eb;
-      background: #f9fafb;
-      font-size: 0.8rem;
-    }
-
-    .app--dark .summary-card {
-      background: #020617;
-      border-color: #1f2937;
-    }
-
-    .summary-card__label {
-      font-family: "Manrope", system-ui, sans-serif;
-      font-weight: 600;
-      margin-bottom: 4px;
-      font-size: 0.8rem;
-    }
-
-    .summary-card__row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: 2px;
-    }
-
-    .summary-card__row span:first-child {
-      color: var(--color-text-muted);
-    }
-
-    .app--dark .summary-card__row span:first-child {
-      color: var(--color-text-muted-dark);
-    }
-
-    .summary-card__row--emphasis span:last-child {
-      font-weight: 600;
-    }
-
-    /* FILTERS & FIELDS */
-
-    .filters {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      align-items: flex-end;
-      margin-bottom: 12px;
-    }
-
-    .field {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      font-size: 0.8rem;
-      min-width: 140px;
-    }
-
-    .field label {
-      color: var(--color-text-muted);
-    }
-
-    .app--dark .field label {
-      color: var(--color-text-muted-dark);
-    }
-
-    input[type="date"],
-    input[type="number"],
-    input[type="text"],
-    input[type="password"],
-    textarea,
-    select {
-      border-radius: 10px;
-      border: 1px solid #d1d5db;
-      background: #ffffff;
-      padding: 6px 8px;
-      font-family: inherit;
-      font-size: 0.9rem;
-      color: inherit;
-      outline: none;
-      transition: border-color var(--transition-fast),
-        box-shadow var(--transition-fast),
-        background-color var(--transition-fast);
-    }
-
-    .app--dark input[type="date"],
-    .app--dark input[type="number"],
-    .app--dark input[type="text"],
-    .app--dark input[type="password"],
-    .app--dark textarea,
-    .app--dark select {
-      background: #020617;
-      border-color: #4b5563;
-    }
-
-    input:focus,
-    textarea:focus,
-    select:focus {
-      border-color: var(--color-accent);
-      box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.3);
-    }
-
-    textarea {
-      resize: vertical;
-      min-height: 60px;
-    }
-
-    /* RANGE SUMMARY & CHART */
-
-    .range-summary {
-      font-size: 0.86rem;
-      margin-bottom: 10px;
-    }
-
-    .range-summary h3 {
-      margin: 0 0 2px;
-      font-size: 0.86rem;
-    }
-
-    .range-summary p {
-      margin: 0;
-      color: var(--color-text-muted);
-    }
-
-    .app--dark .range-summary p {
-      color: var(--color-text-muted-dark);
-    }
-
-    .chart-container {
-      height: 220px;
-      padding: 8px 6px 4px;
-      border-radius: var(--radius-lg);
-      border: 1px solid #e5e7eb;
-      margin-bottom: 14px;
-      background: #ffffff;
-    }
-
-    .app--dark .chart-container {
-      background: #020617;
-      border-color: #1f2937;
-    }
-
-    .chart-metric-toggle {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-
-    .chart-metric-btn--active {
-      background: var(--color-accent);
-      color: #ffffff;
-    }
-
-    /* RECENT LIST */
-
-    .recent-table h3 {
-      margin: 0 0 6px;
-      font-size: 0.9rem;
-    }
-
-    .recent-list {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      max-height: 210px;
-      overflow: auto;
-      font-size: 0.8rem;
-    }
-
-    .recent-list__item {
-      padding: 6px 4px;
-      border-bottom: 1px solid #e5e7eb;
-    }
-
-    .app--dark .recent-list__item {
-      border-color: #1f2937;
-    }
-
-    .recent-list__main {
-      display: flex;
-      justify-content: space-between;
-      gap: 8px;
-    }
-
-    .recent-list__date {
-      color: var(--color-text-muted);
-    }
-
-    .app--dark .recent-list__date {
-      color: var(--color-text-muted-dark);
-    }
-
-    .recent-list__amount {
-      font-weight: 600;
-    }
-
-    .recent-list__meta {
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-      color: var(--color-text-muted);
-    }
-
-    .app--dark .recent-list__meta {
-      color: var(--color-text-muted-dark);
-    }
-
-    .recent-list__empty {
-      padding: 6px 0;
-      color: var(--color-text-muted);
-    }
-
-    /* FORM LAYOUT */
-
-    .form {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      font-size: 0.85rem;
-    }
-
-    .form__row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-
-    /* TABLE */
-
-    .data-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
-      font-size: 0.85rem;
-    }
-
-    .data-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.8rem;
-    }
-
-    .data-table thead {
-      background: #f3f4f6;
-    }
-
-    .app--dark .data-table thead {
-      background: #020617;
-    }
-
-    .data-table th,
-    .data-table td {
-      padding: 6px 8px;
-      border-bottom: 1px solid #e5e7eb;
-      text-align: left;
-    }
-
-    .app--dark .data-table th,
-    .app--dark .data-table td {
-      border-color: #1f2937;
-    }
-
-    .data-table th {
-      font-weight: 600;
-      font-size: 0.78rem;
-      color: var(--color-text-muted);
-    }
-
-    .app--dark .data-table th {
-      color: var(--color-text-muted-dark);
-    }
-
-    .data-table__actions {
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-    }
-
-    .data-badge {
-      display: inline-block;
-      padding: 2px 7px;
-      border-radius: 999px;
-      font-size: 0.7rem;
-      border: 1px solid #d1d5db;
-      color: var(--color-text-muted);
-    }
-
-    .app--dark .data-badge {
-      border-color: #4b5563;
-      color: var(--color-text-muted-dark);
-    }
-
-    /* REMINDER BANNER */
-
-    .reminder-banner {
-      border-radius: var(--radius-xl);
-      padding: 8px 12px;
-      background: #fef2f2;
-      border: 1px solid #fecaca;
-      font-size: 0.82rem;
-      color: #7f1d1d;
-      margin-bottom: 10px;
-    }
-
-    .app--dark .reminder-banner {
-      background: rgba(127, 29, 29, 0.15);
-      border-color: rgba(248, 113, 113, 0.7);
-      color: #fecaca;
-    }
-
-    .reminder-banner strong {
-      font-weight: 600;
-      margin-right: 4px;
-    }
-
-    .reminder-banner--hidden {
-      display: none;
-    }
-
-    /* TOAST */
-
-    .toast {
-      position: fixed;
-      left: 50%;
-      bottom: 20px;
-      transform: translateX(-50%);
-      padding: 8px 14px;
-      border-radius: var(--radius-pill);
-      font-size: 0.8rem;
-      background: #111827;
-      color: #e5e7eb;
-      border: 1px solid #4b5563;
-      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.7);
-      opacity: 1;
-      transition: opacity 160ms ease-out, transform 160ms ease-out;
-      z-index: 40;
-    }
-
-    .toast--error {
-      background: #7f1d1d;
-      border-color: #fecaca;
-    }
-
-    .toast--hidden {
-      opacity: 0;
-      pointer-events: none;
-      transform: translate(-50%, 6px);
-    }
-
-    /* LOADING OVERLAY */
-
-    .loading-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(15, 23, 42, 0.55);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      flex-direction: column;
-      gap: 10px;
-      font-size: 0.85rem;
-      z-index: 50;
-      backdrop-filter: blur(2px);
-      color: #e5e7eb;
-    }
-
-    .loading-overlay--hidden {
-      display: none;
-    }
-
-    .spinner {
-      width: 26px;
-      height: 26px;
-      border-radius: 50%;
-      border: 3px solid rgba(148, 163, 184, 0.6);
-      border-top-color: var(--color-accent);
-      animation: spin 0.6s linear infinite;
-    }
-
-    @keyframes spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
-
-    /* RESPONSIVE */
-
-    @media (max-width: 960px) {
-      .shell {
-        flex-direction: column;
-      }
-
-      .sidebar {
-        width: 100%;
-      }
-
-      .top-bar {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-
-      .top-bar__controls {
-        width: 100%;
-        justify-content: flex-end;
-      }
-
-      .summary-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-    }
-
-    @media (max-width: 600px) {
-      .panel {
-        padding-inline: 12px;
-      }
-
-      .summary-grid {
-        grid-template-columns: minmax(0, 1fr);
-      }
-    }
-
-    /* PRINT: only reports */
-
-    @media print {
-      body {
-        background: #ffffff;
-      }
-
-      #sidebarToggle,
-      .sidebar,
-      #view-add,
-      #view-data,
-      #view-settings,
-      #toast,
-      #loadingOverlay {
-        display: none !important;
-      }
-
-      .view {
-        display: none !important;
-      }
-
-      #view-reports {
-        display: block !important;
-      }
-
-      .panel {
-        box-shadow: none;
-        border: 1px solid #e5e7eb;
-        background: #ffffff !important;
-        color: #111827 !important;
-      }
-    }
-  </style>
-</head>
-<body>
-  <div id="appRoot" class="app app--light">
-    <!-- TOP BAR -->
-    <header class="top-bar">
-      <div class="brand">
-        <div class="brand-logo">AX</div>
-        <div>
-          <h1>ACexpenso</h1>
-          <p>ACube Xerox · daily expense & income tracker</p>
-        </div>
-      </div>
-
-      <div class="top-bar__controls">
-        <span id="driveStatus" class="status-pill">Offline · not connected</span>
-
-        <button id="sidebarToggle" class="button button--ghost" type="button">
-          Toggle menu
-        </button>
-
-        <button id="themeToggleBtn" class="button button--ghost" type="button">
-          Theme: Light
-        </button>
-
-        <button id="signInBtn" class="button button--primary" type="button">
-          Sign in with Google
-        </button>
-        <button id="signOutBtn" class="button button--ghost" type="button" style="display:none;">
-          Sign out
-        </button>
-      </div>
-    </header>
-
-    <div class="shell">
-      <!-- SIDEBAR -->
-      <aside id="sidebar" class="sidebar">
-        <div>
-          <div class="sidebar__title">Navigation</div>
-          <p class="sidebar__subtitle">Jump between capture, data and insights.</p>
-        </div>
-
-        <nav class="sidebar-nav" id="sidebarNav">
-          <button
-            class="sidebar-nav__item sidebar-nav__item--active"
-            type="button"
-            data-view="view-reports"
-          >
-            Reports & dashboard
-            <span>Landing view – see profit, collections, expenses</span>
-          </button>
-
-          <button
-            class="sidebar-nav__item"
-            type="button"
-            data-view="view-add"
-          >
-            Add record
-            <span>Enter daily income & expenses</span>
-          </button>
-
-          <button
-            class="sidebar-nav__item"
-            type="button"
-            data-view="view-data"
-          >
-            All records
-            <span>Search, filter, edit or delete entries</span>
-          </button>
-
-          <button
-            class="sidebar-nav__item"
-            type="button"
-            data-view="view-settings"
-          >
-            Settings & PIN
-            <span>Update security PIN & closed days</span>
-          </button>
-        </nav>
-      </aside>
-
-      <!-- MAIN CONTENT -->
-      <main class="main">
-        <!-- REPORTS (Landing) -->
-        <section id="view-reports" class="view view--active">
-          <div class="panel">
-            <div class="panel__header">
-              <div>
-                <h2>Reports & analytics</h2>
-                <p class="panel__subheading">
-                  Track collections, expenses and profit for ACube Xerox across any date range.
-                </p>
-              </div>
-              <div>
-                <button id="printReportsBtn" class="button button--ghost" type="button">
-                  Print report
-                </button>
-              </div>
-            </div>
-
-            <!-- Date range filters for reports -->
-            <div class="filters">
-              <div class="field">
-                <label for="reportFrom">From date</label>
-                <input type="date" id="reportFrom" />
-              </div>
-              <div class="field">
-                <label for="reportTo">To date</label>
-                <input type="date" id="reportTo" />
-              </div>
-              <div class="field">
-                <label>&nbsp;</label>
-                <div class="form__row">
-                  <button id="quickTodayBtn" class="button button--ghost" type="button">
-                    Today
-                  </button>
-                  <button id="quickThisWeekBtn" class="button button--ghost" type="button">
-                    This week
-                  </button>
-                  <button id="quickThisMonthBtn" class="button button--ghost" type="button">
-                    This month
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <!-- Summary cards -->
-            <div class="summary-grid">
-              <div class="summary-card">
-                <div class="summary-card__label">Collections</div>
-                <div class="summary-card__row summary-card__row--emphasis">
-                  <span>Total</span>
-                  <span id="summaryTotalIncome">₹0</span>
-                </div>
-              </div>
-
-              <div class="summary-card">
-                <div class="summary-card__label">Expenses</div>
-                <div class="summary-card__row summary-card__row--emphasis">
-                  <span>Total</span>
-                  <span id="summaryTotalExpense">₹0</span>
-                </div>
-              </div>
-
-              <div class="summary-card">
-                <div class="summary-card__label">Profit</div>
-                <div class="summary-card__row summary-card__row--emphasis">
-                  <span>Net</span>
-                  <span id="summaryTotalProfit">₹0</span>
-                </div>
-              </div>
-
-              <div class="summary-card">
-                <div class="summary-card__label">Entries</div>
-                <div class="summary-card__row summary-card__row--emphasis">
-                  <span>Count</span>
-                  <span id="summaryEntryCount">0</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Range description -->
-            <div class="range-summary">
-              <h3 id="rangeTitle">No date range selected</h3>
-              <p id="rangeSubtitle">
-                Choose a date range above to view trend and category breakdown.
-              </p>
-            </div>
-
-            <div class="panel__section-title">Overview charts</div>
-
-            <!-- Metric toggle + groupBy -->
-            <div class="filters" style="margin-bottom: 8px;">
-              <div class="field">
-                <label>Metric</label>
-                <div id="chartMetricToggle" class="chart-metric-toggle">
-                  <button
-                    type="button"
-                    class="button button--secondary chart-metric-btn chart-metric-btn--active"
-                    data-metric="profit"
-                  >
-                    Profit
-                  </button>
-                  <button
-                    type="button"
-                    class="button button--secondary chart-metric-btn"
-                    data-metric="income"
-                  >
-                    Collections
-                  </button>
-                  <button
-                    type="button"
-                    class="button button--secondary chart-metric-btn"
-                    data-metric="expense"
-                  >
-                    Expenses
-                  </button>
-                </div>
-              </div>
-
-              <div class="field">
-                <label for="reportGroupBy">Group by</label>
-                <select id="reportGroupBy">
-                  <option value="monthly">Monthly</option>
-                  <option value="yearly">Yearly</option>
-                  <option value="all">All</option>
-                </select>
-              </div>
-            </div>
-
-            <!-- Trend chart -->
-            <div class="chart-container">
-              <canvas id="trendChart"></canvas>
-            </div>
-
-            <!-- Expenses by category (pie) -->
-            <div class="panel__section-title">Expenses by category</div>
-            <div class="chart-container">
-              <canvas id="expenseCategoryChart"></canvas>
-            </div>
-
-            <!-- Recent entries -->
-            <div class="recent-table">
-              <h3>Recent entries in this period</h3>
-              <ul class="recent-list" id="reportsRecentList">
-                <li class="recent-list__empty">No entries in this range yet.</li>
-              </ul>
-            </div>
-          </div>
-        </section>
-
-        <!-- ADD RECORD -->
-        <section id="view-add" class="view">
-          <div class="panel">
-            <div class="panel__header">
-              <div>
-                <h2>Add record</h2>
-                <p class="panel__subheading">
-                  Capture daily expenses and collections. You can backdate entries if you forgot to log them.
-                </p>
-              </div>
-            </div>
-
-            <div
-              id="reminderBanner"
-              class="reminder-banner reminder-banner--hidden"
-            >
-              <strong>Reminder:</strong>
-              You have recent days without entries. Add missing records or mark those days as closed.
-            </div>
-
-            <form id="entryForm" class="form">
-              <div class="form__row">
-                <div class="field">
-                  <label for="entryDate">Date</label>
-                  <input
-                    id="entryDate"
-                    name="date"
-                    type="date"
-                    required
-                  />
-                </div>
-
-                <div class="field">
-                  <label for="entryType">Type</label>
-                  <select id="entryType" name="type">
-                    <option value="expense">Expense</option>
-                    <option value="income">Collection (income)</option>
-                  </select>
-                </div>
-
-                <div class="field">
-                  <label for="entryAmount">Amount (₹)</label>
-                  <input
-                    id="entryAmount"
-                    name="amount"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    placeholder="0.00"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div class="form__row">
-                <div class="field">
-                  <label for="entryCategory">Category</label>
-                  <input
-                    id="entryCategory"
-                    name="category"
-                    type="text"
-                    list="categorySuggestions"
-                    placeholder="e.g., Xerox paper, Ink, Printing, Binding"
-                  />
-                  <datalist id="categorySuggestions"></datalist>
-                </div>
-
-                <div class="field">
-                  <label for="entryPaymentMode">Payment mode</label>
-                  <select id="entryPaymentMode" name="paymentMode">
-                    <option value="">Not specified</option>
-                    <option value="cash">Cash</option>
-                    <option value="upi">UPI</option>
-                    <option value="card">Card</option>
-                    <option value="online">Online transfer</option>
-                  </select>
-                </div>
-              </div>
-
-              <div class="field">
-                <label for="entryNote">Note / description</label>
-                <textarea
-                  id="entryNote"
-                  name="note"
-                  placeholder="Short description (e.g., 'A4 bundle 500 sheets', 'Color print job for college student')"
-                ></textarea>
-              </div>
-
-              <div class="field">
-                <label>
-                  <input
-                    id="entryClosed"
-                    name="closed"
-                    type="checkbox"
-                  />
-                  Mark this date as "Shop closed" (no business done).
-                </label>
-              </div>
-
-              <div class="form__row" style="justify-content: flex-end;">
-                <button
-                  id="resetEntryBtn"
-                  type="button"
-                  class="button button--ghost"
-                >
-                  Clear form
-                </button>
-                <button
-                  id="entrySubmitBtn"
-                  type="submit"
-                  class="button button--primary"
-                >
-                  Add record
-                </button>
-              </div>
-            </form>
-          </div>
-        </section>
-
-        <!-- DATA / ALL RECORDS -->
-        <section id="view-data" class="view">
-          <div class="panel">
-            <div class="panel__header">
-              <div>
-                <h2>All records</h2>
-                <p class="panel__subheading">
-                  Browse, filter, edit or delete entries. Editing will require your security PIN.
-                </p>
-              </div>
-            </div>
-
-            <div class="filters">
-              <div class="field">
-                <label for="dataFrom">From date</label>
-                <input type="date" id="dataFrom" />
-              </div>
-              <div class="field">
-                <label for="dataTo">To date</label>
-                <input type="date" id="dataTo" />
-              </div>
-
-              <div class="field">
-                <label for="dataTypeFilter">Type</label>
-                <select id="dataTypeFilter">
-                  <option value="">All</option>
-                  <option value="income">Collections only</option>
-                  <option value="expense">Expenses only</option>
-                </select>
-              </div>
-
-              <div class="field">
-                <label for="dataCategoryFilter">Category</label>
-                <input
-                  id="dataCategoryFilter"
-                  type="text"
-                  list="categorySuggestions"
-                  placeholder="Any category"
-                />
-              </div>
-
-              <div class="field">
-                <label for="dataSearch">Search notes</label>
-                <input
-                  id="dataSearch"
-                  type="text"
-                  placeholder="Search in notes/description..."
-                />
-              </div>
-            </div>
-
-            <div class="data-header">
-              <div id="dataCountLabel">0 records</div>
-              <div>
-                <button id="dataExportBtn" class="button button--ghost" type="button">
-                  Export JSON backup
-                </button>
-              </div>
-            </div>
-
-            <div class="panel__table-wrapper">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Type</th>
-                    <th>Category</th>
-                    <th>Amount (₹)</th>
-                    <th>Mode</th>
-                    <th>Note</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="dataTableBody">
-                  <!-- Rows injected by app.js -->
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-
-        <!-- SETTINGS / PIN -->
-        <section id="view-settings" class="view">
-          <div class="panel">
-            <div class="panel__header">
-              <div>
-                <h2>Settings & security</h2>
-                <p class="panel__subheading">
-                  Manage your security PIN and mark days when ACube Xerox is closed.
-                </p>
-              </div>
-            </div>
-
-            <!-- PIN management -->
-            <div class="panel__section-title">Security PIN</div>
-            <p class="panel__subheading">
-              PIN is required to update or delete existing records. Initial PIN is set to <strong>2807</strong>.
-            </p>
-
-            <form id="pinForm" class="form" autocomplete="off">
-              <div class="form__row">
-                <div class="field">
-                  <label for="currentPin">Current PIN</label>
-                  <input
-                    id="currentPin"
-                    type="password"
-                    inputmode="numeric"
-                    maxlength="8"
-                    autocomplete="off"
-                  />
-                </div>
-                <div class="field">
-                  <label for="newPin">New PIN</label>
-                  <input
-                    id="newPin"
-                    type="password"
-                    inputmode="numeric"
-                    maxlength="8"
-                    autocomplete="off"
-                  />
-                </div>
-                <div class="field">
-                  <label for="confirmPin">Confirm new PIN</label>
-                  <input
-                    id="confirmPin"
-                    type="password"
-                    inputmode="numeric"
-                    maxlength="8"
-                    autocomplete="off"
-                  />
-                </div>
-              </div>
-
-              <div class="form__row" style="justify-content: flex-end;">
-                <button
-                  id="updatePinBtn"
-                  type="submit"
-                  class="button button--primary"
-                >
-                  Update PIN
-                </button>
-              </div>
-            </form>
-
-            <!-- Closed days -->
-            <div class="panel__section-title">Closed business days</div>
-            <p class="panel__subheading">
-              Mark days when the shop was closed. These days are ignored when checking for missing entries.
-            </p>
-
-            <form id="closedDayForm" class="form__row">
-              <div class="field">
-                <label for="closedDateInput">Closed date</label>
-                <input id="closedDateInput" type="date" />
-              </div>
-              <div class="field">
-                <label>&nbsp;</label>
-                <button
-                  id="addClosedDayBtn"
-                  type="submit"
-                  class="button button--ghost"
-                >
-                  Add closed day
-                </button>
-              </div>
-            </form>
-
-            <ul id="closedDaysList" class="recent-list" style="margin-top: 8px;">
-              <!-- Closed days rendered here -->
-            </ul>
-
-            <div class="panel__section-title">App info</div>
-            <p class="panel__subheading">
-              ACexpenso is stored as <code>expenses_data.json</code> in your Google Drive.
-              You can move or back it up like any other file.
-            </p>
-          </div>
-        </section>
-      </main>
-    </div>
-  </div>
-
-  <!-- Toast notifications -->
-  <div id="toast" class="toast toast--hidden"></div>
-
-  <!-- Loading overlay -->
-  <div id="loadingOverlay" class="loading-overlay loading-overlay--hidden">
-    <div class="spinner"></div>
-    <div>Syncing with Google Drive…</div>
-  </div>
-
-  <!-- Google APIs -->
+  <!-- Google APIs (Drive auth) -->
   <script
     src="https://apis.google.com/js/api.js"
     async
@@ -1369,11 +36,1788 @@
     onload="gisLoaded()"
   ></script>
 
-  <!-- Chart.js for graphs -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg-body: #020617;
+      --bg-elevated: #020617;
+      --bg-elevated-soft: #020617;
+      --bg-sidebar: #020617;
+      --bg-accent-soft: rgba(56, 189, 248, 0.08);
+      --bg-badge-income: rgba(16, 185, 129, 0.12);
+      --bg-badge-expense: rgba(248, 113, 113, 0.12);
 
-  <!-- Your app scripts -->
-  <script src="drive-client.js"></script>
-  <script src="app.js"></script>
+      --border-subtle: rgba(148, 163, 184, 0.35);
+      --border-strong: rgba(148, 163, 184, 0.65);
+
+      --text-main: #e5e7eb;
+      --text-muted: #9ca3af;
+      --text-faint: #6b7280;
+      --text-strong: #f9fafb;
+      --text-accent: #38bdf8;
+      --text-danger: #f97373;
+
+      --accent: #38bdf8;
+      --accent-strong: #fb923c;
+
+      --radius-lg: 16px;
+      --radius-xl: 22px;
+
+      --shadow-soft: 0 18px 60px rgba(15, 23, 42, 0.8);
+
+      --font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", sans-serif;
+    }
+
+    .app--light {
+      --bg-body: #f3f4f6;
+      --bg-elevated: #ffffff;
+      --bg-elevated-soft: #f9fafb;
+      --bg-sidebar: #0f172a;
+      --bg-accent-soft: rgba(37, 99, 235, 0.08);
+
+      --border-subtle: rgba(148, 163, 184, 0.35);
+      --border-strong: rgba(148, 163, 184, 0.65);
+
+      --text-main: #0f172a;
+      --text-muted: #6b7280;
+      --text-faint: #9ca3af;
+      --text-strong: #020617;
+      --text-accent: #2563eb;
+      --text-danger: #b91c1c;
+
+      --accent: #2563eb;
+      --accent-strong: #f97316;
+
+      --bg-badge-income: rgba(34, 197, 94, 0.12);
+      --bg-badge-expense: rgba(239, 68, 68, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: radial-gradient(circle at top, #0b1120 0, #020617 48%, #020617 100%);
+      color: var(--text-main);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    #appRoot {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Layout */
+
+    .app-shell {
+      display: grid;
+      grid-template-columns: 260px minmax(0, 1fr);
+      min-height: calc(100vh - 56px);
+    }
+
+    @media (max-width: 960px) {
+      .app-shell {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    header.app-header {
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 18px;
+      border-bottom: 1px solid var(--border-subtle);
+      backdrop-filter: blur(18px);
+      background: linear-gradient(
+        90deg,
+        rgba(15, 23, 42, 0.96),
+        rgba(15, 23, 42, 0.94)
+      );
+      position: sticky;
+      top: 0;
+      z-index: 40;
+    }
+
+    .app--light header.app-header {
+      background: linear-gradient(
+        90deg,
+        rgba(249, 250, 251, 0.98),
+        rgba(241, 245, 249, 0.96)
+      );
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .app-logo {
+      width: 32px;
+      height: 32px;
+      border-radius: 999px;
+      background: conic-gradient(
+        from 160deg,
+        #38bdf8,
+        #6366f1,
+        #fb923c,
+        #38bdf8
+      );
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 12px 32px rgba(15, 23, 42, 0.7);
+      flex-shrink: 0;
+    }
+
+    .app-logo span {
+      font-weight: 700;
+      color: #f9fafb;
+      font-size: 0.9rem;
+      letter-spacing: 0.08em;
+    }
+
+    .app-title-group {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .app-title {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--text-strong);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .app-subtitle {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .status-pill {
+      font-size: 0.75rem;
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border-subtle);
+      background: rgba(15, 23, 42, 0.9);
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    .app--light .status-pill {
+      background: rgba(248, 250, 252, 0.95);
+    }
+
+    .sidebar-toggle {
+      display: none;
+    }
+
+    @media (max-width: 960px) {
+      .sidebar-toggle {
+        display: inline-flex;
+      }
+    }
+
+    /* Sidebar */
+
+    aside.sidebar {
+      background: radial-gradient(circle at top, #0b1120, #020617);
+      border-right: 1px solid var(--border-subtle);
+      padding: 16px 14px 18px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .app--light aside.sidebar {
+      background: #0f172a;
+    }
+
+    .sidebar::before {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background: radial-gradient(
+        circle at top,
+        rgba(56, 189, 248, 0.2),
+        transparent 60%
+      );
+      opacity: 0.18;
+      pointer-events: none;
+    }
+
+    .sidebar-inner {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      gap: 16px;
+    }
+
+    .sidebar-section-label {
+      font-size: 0.7rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-faint);
+      margin-bottom: 4px;
+    }
+
+    nav.sidebar-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .sidebar-nav__item {
+      border: none;
+      outline: none;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      text-align: left;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: transparent;
+      color: var(--text-main);
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition:
+        background-color 0.18s ease,
+        color 0.18s ease,
+        transform 0.18s ease;
+    }
+
+    .sidebar-nav__item span {
+      opacity: 0.9;
+    }
+
+    .sidebar-nav__item small {
+      font-size: 0.65rem;
+      color: var(--text-faint);
+    }
+
+    .sidebar-nav__item:hover {
+      background: rgba(15, 23, 42, 0.76);
+      transform: translateY(-1px);
+    }
+
+    .sidebar-nav__item--active {
+      background: rgba(15, 23, 42, 0.98);
+      box-shadow: 0 10px 32px rgba(0, 0, 0, 0.8);
+      border: 1px solid var(--border-strong);
+    }
+
+    .app--light .sidebar-nav__item:hover {
+      background: rgba(15, 23, 42, 0.9);
+      color: #e5e7eb;
+    }
+
+    .app--light .sidebar-nav__item--active {
+      background: rgba(15, 23, 42, 1);
+      color: #e5e7eb;
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      border-top: 1px dashed rgba(148, 163, 184, 0.45);
+      padding-top: 10px;
+      font-size: 0.72rem;
+      color: var(--text-faint);
+    }
+
+    .sidebar-footer strong {
+      color: var(--text-muted);
+    }
+
+    @media (max-width: 960px) {
+      aside.sidebar {
+        position: absolute;
+        top: 56px;
+        bottom: 0;
+        left: 0;
+        width: 250px;
+        z-index: 30;
+        transform: translateX(0);
+        transition: transform 0.2s ease, opacity 0.2s ease;
+      }
+
+      aside.sidebar.sidebar--hidden {
+        transform: translateX(-260px);
+        opacity: 0;
+        pointer-events: none;
+      }
+    }
+
+    @media (min-width: 961px) {
+      aside.sidebar.sidebar--hidden {
+        display: block; /* no-op on desktop */
+      }
+    }
+
+    /* Main content */
+
+    .main {
+      padding: 16px 18px 24px;
+      background: radial-gradient(circle at top, #020617, #020617);
+    }
+
+    .app--light .main {
+      background: #f3f4f6;
+    }
+
+    .main-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .view {
+      display: none;
+      opacity: 0;
+      transform: translateY(4px);
+      transition: opacity 0.18s ease, transform 0.18s ease;
+    }
+
+    .view--active {
+      display: block;
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .view-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .view-heading {
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: var(--text-strong);
+    }
+
+    .view-subtitle {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    /* Cards */
+
+    .card {
+      border-radius: var(--radius-xl);
+      background: radial-gradient(circle at top left, #0b1120, #020617 60%);
+      border: 1px solid var(--border-subtle);
+      padding: 14px 16px 14px;
+      box-shadow: var(--shadow-soft);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .app--light .card {
+      background: var(--bg-elevated);
+      box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background: radial-gradient(
+        circle at top left,
+        rgba(56, 189, 248, 0.2),
+        transparent 60%
+      );
+      opacity: 0.15;
+      pointer-events: none;
+    }
+
+    .card-inner {
+      position: relative;
+      z-index: 1;
+    }
+
+    .card-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: var(--text-strong);
+    }
+
+    .card-subtitle {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    /* Buttons */
+
+    .button {
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-main);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      transition:
+        background-color 0.18s ease,
+        border-color 0.18s ease,
+        transform 0.18s ease,
+        box-shadow 0.18s ease;
+    }
+
+    .button--primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+      color: #0f172a;
+      border-color: transparent;
+      box-shadow: 0 14px 36px rgba(37, 99, 235, 0.55);
+    }
+
+    .button--primary:hover {
+      transform: translateY(-1px);
+    }
+
+    .button--secondary {
+      background: rgba(248, 250, 252, 0.02);
+      border-color: var(--border-subtle);
+    }
+
+    .button--ghost {
+      background: transparent;
+      border-color: var(--border-subtle);
+    }
+
+    .button--ghost:hover,
+    .button--secondary:hover {
+      background: rgba(15, 23, 42, 0.8);
+      transform: translateY(-1px);
+    }
+
+    .app--light .button--ghost:hover,
+    .app--light .button--secondary:hover {
+      background: rgba(15, 23, 42, 0.95);
+      color: #e5e7eb;
+    }
+
+    .button:active {
+      transform: translateY(0);
+      box-shadow: none;
+    }
+
+    .button-icon {
+      font-size: 0.9rem;
+    }
+
+    /* Inputs */
+
+    .field-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .field-grid--3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .field-grid--2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    @media (max-width: 960px) {
+      .field-grid,
+      .field-grid--3,
+      .field-grid--2 {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .form-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 0.8rem;
+    }
+
+    .form-label {
+      color: var(--text-muted);
+    }
+
+    .form-input,
+    .form-select,
+    .form-textarea {
+      border-radius: 10px;
+      border: 1px solid var(--border-subtle);
+      padding: 6px 9px;
+      font-size: 0.85rem;
+      background: rgba(15, 23, 42, 0.85);
+      color: var(--text-main);
+      outline: none;
+      width: 100%;
+    }
+
+    .app--light .form-input,
+    .app--light .form-select,
+    .app--light .form-textarea {
+      background: #f9fafb;
+    }
+
+    .form-input:focus,
+    .form-select:focus,
+    .form-textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.5);
+    }
+
+    .form-textarea {
+      resize: vertical;
+      min-height: 60px;
+    }
+
+    .form-help {
+      font-size: 0.7rem;
+      color: var(--text-faint);
+    }
+
+    .inline-checkbox {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .inline-checkbox input[type="checkbox"] {
+      width: 14px;
+      height: 14px;
+    }
+
+    /* Summary cards */
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    @media (max-width: 1024px) {
+      .summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 640px) {
+      .summary-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .summary-card {
+      border-radius: 14px;
+      padding: 10px 11px;
+      background: radial-gradient(circle at top left, #0f172a, #020617);
+      border: 1px solid rgba(31, 41, 55, 0.8);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .app--light .summary-card {
+      background: #f9fafb;
+      border-color: rgba(209, 213, 219, 0.9);
+    }
+
+    .summary-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .summary-main {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 6px;
+    }
+
+    .summary-amount {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--text-strong);
+    }
+
+    .summary-sub {
+      font-size: 0.75rem;
+      color: var(--text-faint);
+    }
+
+    /* Chart area */
+
+    .charts-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 2fr) minmax(0, 1.4fr);
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    @media (max-width: 960px) {
+      .charts-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .chart-container {
+      position: relative;
+      height: 260px;
+    }
+
+    .chart-metric-toggle {
+      display: inline-flex;
+      border-radius: 999px;
+      padding: 2px;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(55, 65, 81, 0.9);
+      gap: 2px;
+    }
+
+    .app--light .chart-metric-toggle {
+      background: #f9fafb;
+      border-color: rgba(209, 213, 219, 0.9);
+    }
+
+    .chart-metric-btn {
+      border-radius: 999px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      padding: 4px 9px;
+      cursor: pointer;
+    }
+
+    .chart-metric-btn--active {
+      background: var(--bg-accent-soft);
+      color: var(--text-accent);
+    }
+
+    /* Recent list */
+
+    .recent-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      max-height: 240px;
+      overflow-y: auto;
+    }
+
+    .recent-list__item {
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(31, 41, 55, 0.6);
+      font-size: 0.78rem;
+    }
+
+    .app--light .recent-list__item {
+      border-bottom-color: rgba(209, 213, 219, 0.8);
+    }
+
+    .recent-list__item:last-child {
+      border-bottom: none;
+    }
+
+    .recent-list__main {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 2px;
+    }
+
+    .recent-list__date {
+      color: var(--text-muted);
+    }
+
+    .recent-list__amount {
+      font-weight: 500;
+    }
+
+    .recent-list__meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      color: var(--text-faint);
+    }
+
+    .recent-list__empty {
+      padding: 8px 0;
+      color: var(--text-muted);
+    }
+
+    /* Reminder banner */
+
+    .reminder-banner {
+      border-radius: 12px;
+      padding: 8px 10px;
+      background: rgba(251, 191, 36, 0.08);
+      border: 1px dashed rgba(245, 158, 11, 0.8);
+      font-size: 0.78rem;
+      color: var(--text-main);
+      margin-bottom: 10px;
+    }
+
+    .reminder-banner--hidden {
+      display: none;
+    }
+
+    /* Data table */
+
+    .data-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: flex-end;
+      margin-bottom: 10px;
+    }
+
+    .data-filters .form-field {
+      min-width: 160px;
+    }
+
+    .data-count-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .data-table-wrapper {
+      border-radius: 14px;
+      border: 1px solid var(--border-subtle);
+      overflow: hidden;
+      background: rgba(15, 23, 42, 0.9);
+    }
+
+    .app--light .data-table-wrapper {
+      background: #ffffff;
+    }
+
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.78rem;
+    }
+
+    .data-table thead {
+      background: rgba(15, 23, 42, 0.95);
+      color: var(--text-muted);
+    }
+
+    .app--light .data-table thead {
+      background: #f9fafb;
+    }
+
+    .data-table th,
+    .data-table td {
+      padding: 8px 10px;
+      text-align: left;
+      border-bottom: 1px solid rgba(31, 41, 55, 0.9);
+    }
+
+    .app--light .data-table th,
+    .app--light .data-table td {
+      border-bottom-color: rgba(229, 231, 235, 1);
+    }
+
+    .data-table tbody tr:nth-child(even) {
+      background: rgba(15, 23, 42, 0.4);
+    }
+
+    .app--light .data-table tbody tr:nth-child(even) {
+      background: rgba(249, 250, 251, 1);
+    }
+
+    .data-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.7rem;
+    }
+
+    .data-badge[data-kind="income"] {
+      background: var(--bg-badge-income);
+      color: #6ee7b7;
+    }
+
+    .app--light .data-badge[data-kind="income"] {
+      color: #16a34a;
+    }
+
+    .data-badge[data-kind="expense"] {
+      background: var(--bg-badge-expense);
+      color: #fecaca;
+    }
+
+    .app--light .data-badge[data-kind="expense"] {
+      color: #b91c1c;
+    }
+
+    .data-table__actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    /* Settings / PIN */
+
+    .settings-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+      gap: 12px;
+    }
+
+    @media (max-width: 960px) {
+      .settings-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    /* Toast */
+
+    .toast {
+      position: fixed;
+      right: 16px;
+      bottom: 18px;
+      z-index: 50;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 0.8rem;
+      background: rgba(15, 23, 42, 0.98);
+      color: #e5e7eb;
+      border: 1px solid rgba(55, 65, 81, 1);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8);
+      max-width: 320px;
+    }
+
+    .app--light .toast {
+      background: #111827;
+      color: #e5e7eb;
+    }
+
+    .toast--error {
+      border-color: rgba(248, 113, 113, 0.95);
+    }
+
+    .toast--hidden {
+      display: none;
+    }
+
+    /* Loading overlay */
+
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(3px);
+      z-index: 60;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .loading-overlay--hidden {
+      display: none;
+    }
+
+    .loading-inner {
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.98);
+      border: 1px solid rgba(55, 65, 81, 1);
+      color: #e5e7eb;
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .loading-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: var(--accent);
+      animation: pulse 1s infinite alternate;
+    }
+
+    .loading-dot:nth-child(2) {
+      animation-delay: 0.15s;
+    }
+
+    .loading-dot:nth-child(3) {
+      animation-delay: 0.3s;
+    }
+
+    @keyframes pulse {
+      from {
+        transform: scale(0.8);
+        opacity: 0.4;
+      }
+      to {
+        transform: scale(1.15);
+        opacity: 1;
+      }
+    }
+
+    /* Utility */
+
+    .stack-sm {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .stack-md {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .muted {
+      color: var(--text-muted);
+    }
+
+    .danger {
+      color: var(--text-danger);
+    }
+  </style>
+</head>
+<body>
+<div id="appRoot" class="app--dark">
+  <!-- HEADER -->
+  <header class="app-header">
+    <div class="header-left">
+      <button
+        id="sidebarToggle"
+        class="button button--ghost sidebar-toggle"
+        type="button"
+      >
+        <span class="button-icon">☰</span>
+      </button>
+      <div class="app-logo">
+        <span>AX</span>
+      </div>
+      <div class="app-title-group">
+        <div class="app-title">ACexpenso</div>
+        <div class="app-subtitle">ACube Xerox · Daily books & tax-ready reports</div>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <span id="driveStatus" class="status-pill">Offline · local-only mode</span>
+
+      <button id="themeToggleBtn" class="button button--ghost" type="button">
+        Theme: Dark
+      </button>
+
+      <button
+        id="printReportsBtn"
+        class="button button--secondary"
+        type="button"
+      >
+        <span class="button-icon">🖨</span>
+        <span>Print reports</span>
+      </button>
+
+      <button id="signInBtn" class="button button--primary" type="button">
+        <span class="button-icon">⮕</span>
+        <span>Sign in with Google</span>
+      </button>
+      <button
+        id="signOutBtn"
+        class="button button--ghost"
+        type="button"
+        style="display:none;"
+      >
+        Sign out
+      </button>
+    </div>
+  </header>
+
+  <!-- SHELL -->
+  <div class="app-shell">
+    <!-- SIDEBAR -->
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-inner">
+        <div>
+          <div class="sidebar-section-label">Main</div>
+          <nav class="sidebar-nav">
+            <button
+              class="sidebar-nav__item sidebar-nav__item--active"
+              data-view="view-reports"
+              type="button"
+            >
+              <span>Reports & dashboard</span>
+              <small>Daily · weekly · FY</small>
+            </button>
+            <button
+              class="sidebar-nav__item"
+              data-view="view-add"
+              type="button"
+            >
+              <span>Add record</span>
+              <small>Collections · expenses · closed day</small>
+            </button>
+            <button
+              class="sidebar-nav__item"
+              data-view="view-data"
+              type="button"
+            >
+              <span>All records</span>
+              <small>Search · filter · edit</small>
+            </button>
+            <button
+              class="sidebar-nav__item"
+              data-view="view-settings"
+              type="button"
+            >
+              <span>Settings & PIN</span>
+              <small>Security · closed days</small>
+            </button>
+          </nav>
+        </div>
+
+        <div class="sidebar-footer">
+          <div>Business: <strong>ACube Xerox</strong></div>
+          <div>Use this as your daily book and export CSV/JSON for your CA and tax filing.</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main">
+      <div class="main-inner">
+        <!-- REPORTS VIEW -->
+        <section id="view-reports" class="view view--active">
+          <div class="view-header">
+            <div class="stack-sm">
+              <div class="view-heading">Dashboard & reports</div>
+              <div class="view-subtitle">
+                Overview of collections, expenses, profit and GST-ready breakdowns.
+              </div>
+            </div>
+            <div class="stack-sm" style="align-items:flex-end;">
+              <span class="data-count-label">
+                Use date range & grouping to match your IT or CA requirements.
+              </span>
+            </div>
+          </div>
+
+          <div class="card" style="margin-top:10px;">
+            <div class="card-inner">
+              <div class="card-title-row">
+                <div>
+                  <div class="card-title">Period & grouping</div>
+                  <div class="card-subtitle">
+                    Choose a date range and how to group results (monthly, yearly, etc.).
+                  </div>
+                </div>
+              </div>
+
+              <div class="field-grid">
+                <div class="form-field">
+                  <label class="form-label" for="reportFrom">From date</label>
+                  <input
+                    id="reportFrom"
+                    type="date"
+                    class="form-input"
+                  />
+                </div>
+                <div class="form-field">
+                  <label class="form-label" for="reportTo">To date</label>
+                  <input
+                    id="reportTo"
+                    type="date"
+                    class="form-input"
+                  />
+                </div>
+                <div class="form-field">
+                  <label class="form-label">Quick ranges</label>
+                  <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                    <button
+                      id="quickTodayBtn"
+                      class="button button--ghost"
+                      type="button"
+                    >
+                      Today
+                    </button>
+                    <button
+                      id="quickThisWeekBtn"
+                      class="button button--ghost"
+                      type="button"
+                    >
+                      This week
+                    </button>
+                    <button
+                      id="quickThisMonthBtn"
+                      class="button button--ghost"
+                      type="button"
+                    >
+                      This month
+                    </button>
+                  </div>
+                </div>
+                <div class="form-field">
+                  <label class="form-label" for="reportGroupBy">Group by</label>
+                  <select id="reportGroupBy" class="form-select">
+                    <option value="monthly">Monthly</option>
+                    <option value="yearly">Yearly</option>
+                    <option value="all">All combined</option>
+                  </select>
+                  <div class="form-help">
+                    This affects the trend chart (below).
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Summary cards -->
+          <div class="summary-grid" style="margin-top:10px;">
+            <div class="summary-card">
+              <div class="summary-label">Total collections</div>
+              <div class="summary-main">
+                <div id="summaryTotalIncome" class="summary-amount">₹0.00</div>
+                <div class="summary-sub">Within selected range</div>
+              </div>
+            </div>
+            <div class="summary-card">
+              <div class="summary-label">Total expenses</div>
+              <div class="summary-main">
+                <div id="summaryTotalExpense" class="summary-amount">₹0.00</div>
+                <div class="summary-sub">Business expenses only</div>
+              </div>
+            </div>
+            <div class="summary-card">
+              <div class="summary-label">Net profit</div>
+              <div class="summary-main">
+                <div id="summaryTotalProfit" class="summary-amount">₹0.00</div>
+                <div class="summary-sub">Income – expenses</div>
+              </div>
+            </div>
+            <div class="summary-card">
+              <div class="summary-label">Number of entries</div>
+              <div class="summary-main">
+                <div id="summaryEntryCount" class="summary-amount">0</div>
+                <div class="summary-sub">Collections + expenses</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Range summary + charts -->
+          <div class="card" style="margin-top:12px;">
+            <div class="card-inner stack-md">
+              <div class="card-title-row">
+                <div class="stack-sm">
+                  <div id="rangeTitle" class="card-title">All time overview</div>
+                  <div id="rangeSubtitle" class="card-subtitle">
+                    Once you start entering data, you’ll see profit, GST and category breakdowns here.
+                  </div>
+                </div>
+                <div class="stack-sm" style="align-items:flex-end;">
+                  <label class="form-label">Metric</label>
+                  <div id="chartMetricToggle" class="chart-metric-toggle">
+                    <button
+                      class="chart-metric-btn chart-metric-btn--active"
+                      data-metric="profit"
+                      type="button"
+                    >
+                      Profit
+                    </button>
+                    <button
+                      class="chart-metric-btn"
+                      data-metric="income"
+                      type="button"
+                    >
+                      Collections
+                    </button>
+                    <button
+                      class="chart-metric-btn"
+                      data-metric="expense"
+                      type="button"
+                    >
+                      Expenses
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="charts-grid">
+                <div class="stack-md">
+                  <div class="card-subtitle">
+                    Trend over time (based on grouping & metric selection).
+                  </div>
+                  <div class="chart-container">
+                    <canvas id="trendChart"></canvas>
+                  </div>
+                </div>
+                <div class="stack-md">
+                  <div class="card-subtitle">
+                    Expense breakdown by category (for selected period).
+                  </div>
+                  <div class="chart-container">
+                    <canvas id="expenseCategoryChart"></canvas>
+                  </div>
+                </div>
+              </div>
+
+              <div class="stack-md">
+                <div class="card-title-row" style="margin-top:8px;">
+                  <div class="card-title">Recent entries in this period</div>
+                </div>
+                <ul id="reportsRecentList" class="recent-list"></ul>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ADD VIEW -->
+        <section id="view-add" class="view">
+          <div class="view-header">
+            <div class="stack-sm">
+              <div class="view-heading">Add record</div>
+              <div class="view-subtitle">
+                Record collections, expenses or mark a day as closed. Use the date picker to backfill any missing days.
+              </div>
+            </div>
+            <div>
+              <button
+                id="resetEntryBtn"
+                class="button button--ghost"
+                type="button"
+              >
+                Reset form
+              </button>
+            </div>
+          </div>
+
+          <!-- Reminder -->
+          <div
+            id="reminderBanner"
+            class="reminder-banner reminder-banner--hidden"
+          ></div>
+
+          <!-- Form -->
+          <div class="card" style="margin-top:10px;">
+            <div class="card-inner stack-md">
+              <div class="card-title-row">
+                <div>
+                  <div class="card-title">Basic entry details</div>
+                  <div class="card-subtitle">
+                    These are the only fields you need for daily usage. Advanced accounting details are optional.
+                  </div>
+                </div>
+              </div>
+
+              <form id="entryForm" class="stack-md">
+                <div class="field-grid">
+                  <div class="form-field">
+                    <label class="form-label" for="entryDate">Date</label>
+                    <input
+                      id="entryDate"
+                      type="date"
+                      class="form-input"
+                    />
+                    <div class="form-help">
+                      You can pick past dates if you forgot to enter earlier.
+                    </div>
+                  </div>
+
+                  <div class="form-field">
+                    <label class="form-label" for="entryType">Type</label>
+                    <select id="entryType" class="form-select">
+                      <option value="income">Collection (income)</option>
+                      <option value="expense">Expense</option>
+                    </select>
+                  </div>
+
+                  <div class="form-field">
+                    <label class="form-label" for="entryAmount">Amount (₹)</label>
+                    <input
+                      id="entryAmount"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      class="form-input"
+                      placeholder="0.00"
+                    />
+                    <div class="form-help">
+                      Enter the final amount received/paid. GST fields below will handle taxable splits.
+                    </div>
+                  </div>
+
+                  <div class="form-field">
+                    <label class="form-label" for="entryPaymentMode">Payment mode</label>
+                    <select id="entryPaymentMode" class="form-select">
+                      <option value="">Select mode</option>
+                      <option value="cash">Cash</option>
+                      <option value="google_pay">Google Pay</option>
+                      <option value="phonepe">PhonePe</option>
+                      <option value="paytm">Paytm</option>
+                      <option value="upi_other">UPI – other</option>
+                      <option value="card">Card</option>
+                      <option value="bank_transfer">Bank transfer</option>
+                      <option value="cheque">Cheque</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="field-grid">
+                  <div class="form-field">
+                    <label class="form-label" for="entryCategory">Category</label>
+                    <input
+                      id="entryCategory"
+                      list="categorySuggestions"
+                      class="form-input"
+                      placeholder="e.g. Xerox income, Paper purchase, Rent"
+                    />
+                    <datalist id="categorySuggestions"></datalist>
+                    <div class="form-help">
+                      You can type a new category or select an existing one from the dropdown.
+                    </div>
+                  </div>
+
+                  <div class="form-field" style="grid-column: span 3;">
+                    <label class="form-label" for="entryNote">Note (optional)</label>
+                    <textarea
+                      id="entryNote"
+                      class="form-textarea"
+                      placeholder="Invoice details, job description, justification, etc."
+                    ></textarea>
+                  </div>
+                </div>
+
+                <div class="field-grid--2" style="display:grid;gap:10px;">
+                  <div class="inline-checkbox">
+                    <input id="entryClosed" type="checkbox" />
+                    <label for="entryClosed">
+                      Mark this date as <strong>shop closed</strong> (no business activity)
+                    </label>
+                  </div>
+                  <div class="inline-checkbox">
+                    <input id="entryBusinessFlag" type="checkbox" checked disabled />
+                    <label for="entryBusinessFlag">
+                      Business entry (used in reports) – configured in JS as default
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Advanced accounting details -->
+                <details class="card" style="margin-top:6px;">
+                  <summary class="card-inner" style="cursor:pointer;">
+                    <span class="card-title">Accounting details (optional)</span>
+                    <span class="card-subtitle">
+                      Party, invoice and GST breakdown – helpful for your CA and IT needs.
+                    </span>
+                  </summary>
+                  <div class="card-inner stack-md" style="margin-top:6px;">
+                    <div class="field-grid--3" style="display:grid;gap:10px;">
+                      <div class="form-field">
+                        <label class="form-label" for="voucherType">Voucher type</label>
+                        <select id="voucherType" class="form-select">
+                          <option value="">Auto (based on type)</option>
+                          <option value="sale">Sale</option>
+                          <option value="purchase">Purchase</option>
+                          <option value="expense">Expense</option>
+                          <option value="other">Other</option>
+                        </select>
+                      </div>
+                      <div class="form-field">
+                        <label class="form-label" for="partyName">Party name</label>
+                        <input
+                          id="partyName"
+                          type="text"
+                          class="form-input"
+                          placeholder="Customer / vendor name"
+                        />
+                      </div>
+                      <div class="form-field">
+                        <label class="form-label" for="partyGSTIN">Party GSTIN</label>
+                        <input
+                          id="partyGSTIN"
+                          type="text"
+                          class="form-input"
+                          placeholder="Optional"
+                        />
+                      </div>
+                    </div>
+
+                    <div class="field-grid--3" style="display:grid;gap:10px;">
+                      <div class="form-field">
+                        <label class="form-label" for="invoiceNo">Invoice / bill no.</label>
+                        <input
+                          id="invoiceNo"
+                          type="text"
+                          class="form-input"
+                          placeholder="Optional"
+                        />
+                      </div>
+                      <div class="form-field">
+                        <label class="form-label" for="placeOfSupply">Place of supply</label>
+                        <input
+                          id="placeOfSupply"
+                          type="text"
+                          class="form-input"
+                          placeholder="State code / name (e.g. TS, MH)"
+                        />
+                      </div>
+                      <div class="form-field">
+                        <label class="form-label" for="gstApplicable">GST</label>
+                        <select id="gstApplicable" class="form-select">
+                          <option value="no">No GST</option>
+                          <option value="yes">GST applicable</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div class="field-grid--3" style="display:grid;gap:10px;">
+                      <div class="form-field">
+                        <label class="form-label" for="gstRate">GST rate</label>
+                        <select id="gstRate" class="form-select">
+                          <option value="">Select rate</option>
+                          <option value="0">0%</option>
+                          <option value="5">5%</option>
+                          <option value="12">12%</option>
+                          <option value="18">18%</option>
+                          <option value="28">28%</option>
+                        </select>
+                      </div>
+                      <div class="form-field">
+                        <label class="form-label">Amount type</label>
+                        <div class="stack-sm">
+                          <label class="inline-checkbox">
+                            <input
+                              type="radio"
+                              name="amountType"
+                              value="total"
+                              checked
+                            />
+                            <span>Amount above is total (including GST)</span>
+                          </label>
+                          <label class="inline-checkbox">
+                            <input
+                              type="radio"
+                              name="amountType"
+                              value="taxable"
+                            />
+                            <span>Amount above is taxable value (excluding GST)</span>
+                          </label>
+                        </div>
+                      </div>
+                      <div class="form-field">
+                        <label class="form-label">Classification</label>
+                        <div class="stack-sm">
+                          <label class="inline-checkbox">
+                            <input id="isCapital" type="checkbox" />
+                            <span>Capital item (asset purchase – printer, laptop etc.)</span>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </details>
+
+                <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+                  <button
+                    class="button button--ghost"
+                    type="button"
+                    onclick="switchView && switchView('view-data')"
+                  >
+                    View all records
+                  </button>
+                  <button
+                    class="button button--primary"
+                    type="submit"
+                  >
+                    Save record
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <!-- DATA VIEW -->
+        <section id="view-data" class="view">
+          <div class="view-header">
+            <div class="stack-sm">
+              <div class="view-heading">All records</div>
+              <div class="view-subtitle">
+                Search, filter, edit or delete entries. Use this when reconciling with bank statements or CA notes.
+              </div>
+            </div>
+            <div class="stack-sm" style="align-items:flex-end;">
+              <span id="dataCountLabel" class="data-count-label">0 records</span>
+            </div>
+          </div>
+
+          <div class="card" style="margin-top:10px;">
+            <div class="card-inner stack-md">
+              <div class="card-title-row">
+                <div class="card-title">Filters</div>
+                <div class="card-subtitle">
+                  Apply filters and then export JSON/CSV for backup or sharing.
+                </div>
+              </div>
+
+              <div class="data-filters">
+                <div class="form-field">
+                  <label class="form-label" for="dataFrom">From date</label>
+                  <input id="dataFrom" type="date" class="form-input" />
+                </div>
+                <div class="form-field">
+                  <label class="form-label" for="dataTo">To date</label>
+                  <input id="dataTo" type="date" class="form-input" />
+                </div>
+                <div class="form-field">
+                  <label class="form-label" for="dataTypeFilter">Type</label>
+                  <select id="dataTypeFilter" class="form-select">
+                    <option value="">All</option>
+                    <option value="income">Collections only</option>
+                    <option value="expense">Expenses only</option>
+                  </select>
+                </div>
+                <div class="form-field">
+                  <label class="form-label" for="dataCategoryFilter">Category</label>
+                  <input
+                    id="dataCategoryFilter"
+                    type="text"
+                    class="form-input"
+                    placeholder="Match in category"
+                  />
+                </div>
+                <div class="form-field">
+                  <label class="form-label" for="dataSearch">Search in note</label>
+                  <input
+                    id="dataSearch"
+                    type="text"
+                    class="form-input"
+                    placeholder="Keyword in note"
+                  />
+                </div>
+                <div class="form-field">
+                  <label class="form-label">&nbsp;</label>
+                  <button
+                    id="dataExportBtn"
+                    class="button button--secondary"
+                    type="button"
+                  >
+                    Export JSON
+                  </button>
+                </div>
+              </div>
+
+              <div class="data-table-wrapper">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th style="min-width:120px;">Date</th>
+                      <th>Type</th>
+                      <th style="min-width:140px;">Category</th>
+                      <th style="min-width:100px;">Amount</th>
+                      <th style="min-width:110px;">Payment mode</th>
+                      <th style="min-width:180px;">Note</th>
+                      <th style="min-width:120px;">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dataTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- SETTINGS VIEW -->
+        <section id="view-settings" class="view">
+          <div class="view-header">
+            <div class="stack-sm">
+              <div class="view-heading">Settings & security</div>
+              <div class="view-subtitle">
+                PIN for editing/deleting records, and days where the shop was fully closed.
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-grid" style="margin-top:10px;">
+            <!-- Business info & PIN -->
+            <div class="card">
+              <div class="card-inner stack-md">
+                <div class="card-title-row">
+                  <div>
+                    <div class="card-title">Business profile</div>
+                    <div class="card-subtitle">
+                      Basic details used in reports (hard-coded in JS settings; this panel is for reference).
+                    </div>
+                  </div>
+                </div>
+                <div class="stack-sm">
+                  <div><strong>Business name:</strong> ACube Xerox</div>
+                  <div><strong>Currency:</strong> INR</div>
+                  <div><strong>Financial year:</strong> April – March</div>
+                  <div class="muted">
+                    Update these in <code>settings</code> object in your JSON / JS as needed.
+                  </div>
+                </div>
+
+                <hr style="border:none;border-top:1px dashed var(--border-subtle);margin:8px 0;" />
+
+                <div class="stack-md">
+                  <div class="card-title-row">
+                    <div>
+                      <div class="card-title">Change PIN</div>
+                      <div class="card-subtitle">
+                        PIN is required to edit and delete records. Default is 2807 (set in code).
+                      </div>
+                    </div>
+                  </div>
+
+                  <form id="pinForm" class="stack-md">
+                    <div class="field-grid--2" style="display:grid;gap:10px;">
+                      <div class="form-field">
+                        <label class="form-label" for="currentPin">Current PIN</label>
+                        <input
+                          id="currentPin"
+                          type="password"
+                          class="form-input"
+                          autocomplete="off"
+                        />
+                      </div>
+                      <div class="form-field">
+                        <label class="form-label" for="newPin">New PIN</label>
+                        <input
+                          id="newPin"
+                          type="password"
+                          class="form-input"
+                          autocomplete="off"
+                        />
+                      </div>
+                      <div class="form-field">
+                        <label class="form-label" for="confirmPin">Confirm new PIN</label>
+                        <input
+                          id="confirmPin"
+                          type="password"
+                          class="form-input"
+                          autocomplete="off"
+                        />
+                      </div>
+                    </div>
+                    <div style="display:flex;justify-content:flex-end;">
+                      <button
+                        class="button button--primary"
+                        type="submit"
+                      >
+                        Update PIN
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+
+            <!-- Closed days -->
+            <div class="card">
+              <div class="card-inner stack-md">
+                <div class="card-title-row">
+                  <div>
+                    <div class="card-title">Closed days</div>
+                    <div class="card-subtitle">
+                      Mark days when your shop was fully closed, so reminders and CA reports make sense.
+                    </div>
+                  </div>
+                </div>
+
+                <form id="closedDayForm" class="stack-md">
+                  <div class="field-grid--2" style="display:grid;gap:10px;">
+                    <div class="form-field">
+                      <label class="form-label" for="closedDateInput">Closed date</label>
+                      <input
+                        id="closedDateInput"
+                        type="date"
+                        class="form-input"
+                      />
+                    </div>
+                    <div class="form-field">
+                      <label class="form-label">&nbsp;</label>
+                      <button
+                        class="button button--secondary"
+                        type="submit"
+                      >
+                        Add closed day
+                      </button>
+                    </div>
+                  </div>
+                </form>
+
+                <div class="stack-sm">
+                  <div class="card-subtitle" style="margin-top:4px;margin-bottom:4px;">
+                    Recent closed days
+                  </div>
+                  <ul id="closedDaysList" class="recent-list"></ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast toast--hidden"></div>
+
+  <!-- Loading overlay -->
+  <div id="loadingOverlay" class="loading-overlay loading-overlay--hidden">
+    <div class="loading-inner">
+      <div class="loading-dot"></div>
+      <div class="loading-dot"></div>
+      <div class="loading-dot"></div>
+      <span>Syncing with Google Drive…</span>
+    </div>
+  </div>
+</div>
+
+<!-- Drive client + app logic -->
+<script src="drive-client.js"></script>
+<script src="app.js"></script>
 </body>
 </html>

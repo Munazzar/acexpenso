@@ -1,4 +1,4 @@
-// app.js – ACexpenso
+// app.js – ACexpenso (Accounting edition)
 
 const DEFAULT_PIN = "2807";
 
@@ -46,6 +46,7 @@ function initTheme() {
   if (toggleBtn) {
     toggleBtn.addEventListener("click", () => {
       const root = document.getElementById("appRoot");
+      if (!root) return;
       const isDark = root.classList.contains("app--dark");
       const next = isDark ? "light" : "dark";
       setTheme(next);
@@ -109,8 +110,10 @@ function switchView(viewId) {
   });
 
   if (viewId === "view-add") {
-    // For direct "Add record" navigation we reset the form in "new" mode
-    prepareAddFormForNew();
+    // IMPORTANT: only reset form automatically if we are NOT editing
+    if (!state.ui.editingEntryId) {
+      prepareAddFormForNew(true);
+    }
     renderReminderBanner();
   } else if (viewId === "view-data") {
     renderDataTable();
@@ -139,7 +142,6 @@ function initTopBar() {
       if (window.driveSignIn) {
         window.driveSignIn();
       }
-      // Give GIS a moment to complete, then reload from Drive if possible
       setTimeout(() => {
         updateDriveStatusUI();
         bootstrapData();
@@ -194,6 +196,7 @@ async function ensurePinHashExists() {
   if (state.data.settings.pinHash) return;
   const hash = await hashPin(DEFAULT_PIN);
   state.data.settings.pinHash = hash;
+  // Persistence will happen on the next user save; no need to force-save here.
 }
 
 function initDefaultDates() {
@@ -370,6 +373,18 @@ function prepareAddFormForNew(clearAll = false) {
   const entryNote = document.getElementById("entryNote");
   const entryClosed = document.getElementById("entryClosed");
 
+  const voucherType = document.getElementById("voucherType");
+  const partyName = document.getElementById("partyName");
+  const partyGSTIN = document.getElementById("partyGSTIN");
+  const invoiceNo = document.getElementById("invoiceNo");
+  const placeOfSupply = document.getElementById("placeOfSupply");
+  const gstApplicable = document.getElementById("gstApplicable");
+  const gstRate = document.getElementById("gstRate");
+  const isCapital = document.getElementById("isCapital");
+  const amountTypeRadios = document.querySelectorAll(
+    'input[name="amountType"]'
+  );
+
   const todayISO = toISODate(new Date());
 
   if (!entryDate.value || clearAll) entryDate.value = todayISO;
@@ -379,6 +394,21 @@ function prepareAddFormForNew(clearAll = false) {
   if (entryPaymentMode && clearAll) entryPaymentMode.value = "";
   if (entryNote && clearAll) entryNote.value = "";
   if (entryClosed) entryClosed.checked = false;
+
+  if (voucherType && clearAll) voucherType.value = "";
+  if (partyName && clearAll) partyName.value = "";
+  if (partyGSTIN && clearAll) partyGSTIN.value = "";
+  if (invoiceNo && clearAll) invoiceNo.value = "";
+  if (placeOfSupply && clearAll) placeOfSupply.value = "";
+  if (gstApplicable && clearAll) gstApplicable.value = "no";
+  if (gstRate && clearAll) gstRate.value = "";
+  if (isCapital) isCapital.checked = false;
+
+  if (amountTypeRadios && amountTypeRadios.length) {
+    amountTypeRadios.forEach((r) => {
+      r.checked = r.value === "total";
+    });
+  }
 }
 
 async function onEntrySubmit(event) {
@@ -392,6 +422,19 @@ async function onEntrySubmit(event) {
   const note = document.getElementById("entryNote").value.trim();
   const closedCheckbox = document.getElementById("entryClosed");
 
+  const voucherType = document.getElementById("voucherType").value.trim();
+  const partyName = document.getElementById("partyName").value.trim();
+  const partyGSTIN = document.getElementById("partyGSTIN").value.trim();
+  const invoiceNo = document.getElementById("invoiceNo").value.trim();
+  const placeOfSupply = document.getElementById("placeOfSupply").value.trim();
+  const gstApplicable = document.getElementById("gstApplicable").value;
+  const gstRateStr = document.getElementById("gstRate").value;
+  const isCapital = document.getElementById("isCapital").checked;
+  const amountTypeRadio = document.querySelector(
+    'input[name="amountType"]:checked'
+  );
+  const amountType = amountTypeRadio ? amountTypeRadio.value : "total";
+
   const closedChecked = closedCheckbox ? closedCheckbox.checked : false;
 
   if (!dateStr) {
@@ -402,14 +445,17 @@ async function onEntrySubmit(event) {
   // If marked as closed & no amount, treat as closed day (no entry)
   if (closedChecked && !amountStr) {
     await addClosedDay(dateStr);
-    closedCheckbox.checked = false;
+    if (closedCheckbox) closedCheckbox.checked = false;
     showToast(`Marked ${dateStr} as shop closed.`);
     renderReminderBanner();
     return;
   }
 
   if (!amountStr || !type) {
-    showToast("Type and amount are required (or mark as closed day).", true);
+    showToast(
+      "Type and amount are required (or mark as closed day with no amount).",
+      true
+    );
     return;
   }
 
@@ -417,6 +463,23 @@ async function onEntrySubmit(event) {
   if (!Number.isFinite(amount) || amount <= 0) {
     showToast("Amount must be a positive number.", true);
     return;
+  }
+
+  // GST simple calculations for export (not used in charts directly)
+  const rate = Number(gstRateStr);
+  let taxableAmount = null;
+  let gstAmount = null;
+
+  if (gstApplicable === "yes" && Number.isFinite(rate) && rate > 0) {
+    if (amountType === "taxable") {
+      taxableAmount = amount;
+      gstAmount = Math.round((amount * rate) / 100);
+    } else {
+      // amount is total (including GST)
+      const divisor = 1 + rate / 100;
+      taxableAmount = Math.round((amount / divisor) * 100) / 100;
+      gstAmount = Math.round((amount - taxableAmount) * 100) / 100;
+    }
   }
 
   const now = new Date();
@@ -427,24 +490,38 @@ async function onEntrySubmit(event) {
     const ok = await ensureAuthenticated();
     if (!ok) return;
 
-    const entry = state.data.entries.find((e) => e.id === editingId);
+    const entry = (state.data.entries || []).find((e) => e.id === editingId);
     if (!entry) {
       showToast("Record not found.", true);
+      state.ui.editingEntryId = null;
       return;
     }
+
     entry.date = dateStr;
     entry.type = type;
     entry.amount = amount;
     entry.category = category;
     entry.paymentMode = paymentMode || "";
     entry.note = note;
+    entry.voucherType = voucherType || "";
+    entry.partyName = partyName || "";
+    entry.partyGSTIN = partyGSTIN || "";
+    entry.invoiceNo = invoiceNo || "";
+    entry.placeOfSupply = placeOfSupply || "";
+    entry.gstApplicable = gstApplicable;
+    entry.gstRate = gstRateStr || "";
+    entry.amountType = amountType;
+    entry.isCapital = !!isCapital;
+    entry.taxableAmount = taxableAmount;
+    entry.gstAmount = gstAmount;
     entry.updatedAt = now.toISOString();
+
     state.ui.editingEntryId = null;
     await persistData("Record updated.");
   } else {
     // NEW entry: allowed without PIN
     const id = `${dateStr}_${now.getTime()}`;
-    state.data.entries.push({
+    const newEntry = {
       id,
       date: dateStr,
       type,
@@ -452,35 +529,43 @@ async function onEntrySubmit(event) {
       category,
       paymentMode: paymentMode || "",
       note,
+      voucherType: voucherType || "",
+      partyName: partyName || "",
+      partyGSTIN: partyGSTIN || "",
+      invoiceNo: invoiceNo || "",
+      placeOfSupply: placeOfSupply || "",
+      gstApplicable,
+      gstRate: gstRateStr || "",
+      amountType,
+      isCapital: !!isCapital,
+      taxableAmount,
+      gstAmount,
       createdAt: now.toISOString(),
       updatedAt: now.toISOString()
-    });
+    };
+
+    if (!Array.isArray(state.data.entries)) {
+      state.data.entries = [];
+    }
+    state.data.entries.push(newEntry);
     await persistData("Record added.");
   }
 
   // Keep same date & type; clear amount & note for quick multiple entries
-  document.getElementById("entryAmount").value = "";
-  document.getElementById("entryNote").value = "";
+  const entryAmountEl = document.getElementById("entryAmount");
+  const entryNoteEl = document.getElementById("entryNote");
+  if (entryAmountEl) entryAmountEl.value = "";
+  if (entryNoteEl) entryNoteEl.value = "";
   if (closedCheckbox) closedCheckbox.checked = false;
 }
 
-/**
- * EDIT FLOW FIX:
- * - Show the Add view first (which resets to "new" mode),
- * - then set editingEntryId and overwrite the form fields.
- * - on submit, onEntrySubmit sees editingEntryId and updates instead of adding.
- */
 function startEditEntry(entryId) {
-  const entry = state.data.entries.find((e) => e.id === entryId);
+  const entry = (state.data.entries || []).find((e) => e.id === entryId);
   if (!entry) {
     showToast("Record not found.", true);
     return;
   }
 
-  // First switch to Add view so the form & layout are visible
-  switchView("view-add");
-
-  // Now mark this as an edit
   state.ui.editingEntryId = entryId;
 
   const date = document.getElementById("entryDate");
@@ -491,6 +576,18 @@ function startEditEntry(entryId) {
   const note = document.getElementById("entryNote");
   const closedCheckbox = document.getElementById("entryClosed");
 
+  const voucherType = document.getElementById("voucherType");
+  const partyName = document.getElementById("partyName");
+  const partyGSTIN = document.getElementById("partyGSTIN");
+  const invoiceNo = document.getElementById("invoiceNo");
+  const placeOfSupply = document.getElementById("placeOfSupply");
+  const gstApplicable = document.getElementById("gstApplicable");
+  const gstRate = document.getElementById("gstRate");
+  const isCapital = document.getElementById("isCapital");
+  const amountTypeRadios = document.querySelectorAll(
+    'input[name="amountType"]'
+  );
+
   if (date) date.value = entry.date;
   if (type) type.value = entry.type;
   if (category) category.value = entry.category || "";
@@ -498,6 +595,25 @@ function startEditEntry(entryId) {
   if (paymentMode) paymentMode.value = entry.paymentMode || "";
   if (note) note.value = entry.note || "";
   if (closedCheckbox) closedCheckbox.checked = false;
+
+  if (voucherType) voucherType.value = entry.voucherType || "";
+  if (partyName) partyName.value = entry.partyName || "";
+  if (partyGSTIN) partyGSTIN.value = entry.partyGSTIN || "";
+  if (invoiceNo) invoiceNo.value = entry.invoiceNo || "";
+  if (placeOfSupply) placeOfSupply.value = entry.placeOfSupply || "";
+  if (gstApplicable) gstApplicable.value = entry.gstApplicable || "no";
+  if (gstRate) gstRate.value = entry.gstRate || "";
+  if (isCapital) isCapital.checked = !!entry.isCapital;
+
+  if (amountTypeRadios && amountTypeRadios.length) {
+    const val = entry.amountType || "total";
+    amountTypeRadios.forEach((r) => {
+      r.checked = r.value === val;
+    });
+  }
+
+  // Switch view AFTER setting editingEntryId and form fields.
+  switchView("view-add");
 }
 
 /* DELETE ENTRY */
@@ -609,7 +725,9 @@ async function removeClosedDay(dateStr) {
   const ok = await ensureAuthenticated();
   if (!ok) return;
 
-  state.data.closedDays = (state.data.closedDays || []).filter((d) => d !== dateStr);
+  state.data.closedDays = (state.data.closedDays || []).filter(
+    (d) => d !== dateStr
+  );
   await persistData(`Removed ${dateStr} from closed days.`);
 }
 
@@ -698,9 +816,11 @@ function renderReports() {
     } else {
       rangeTitleEl.textContent = "All time overview";
       rangeSubtitleEl.textContent =
-        `Total collections: ₹${formatCurrency(summary.income)}, ` +
-        `total expenses: ₹${formatCurrency(summary.expense)}, ` +
-        `net profit: ₹${formatCurrency(summary.profit)}.`;
+        `Total collections: ₹${formatCurrency(
+          summary.income
+        )}, total expenses: ₹${formatCurrency(
+          summary.expense
+        )}, net profit: ₹${formatCurrency(summary.profit)}.`;
     }
   }
 
@@ -869,7 +989,6 @@ function renderExpenseCategoryChart(entries) {
 
   const expenses = entries.filter((e) => e.type === "expense");
   if (!expenses.length) {
-    // nothing to show
     return;
   }
 
@@ -932,7 +1051,9 @@ function renderReportsRecentList(rangeEntries) {
     li.innerHTML = `
       <div class="recent-list__main">
         <span class="recent-list__date">${formatShortDate(d)} (${e.date})</span>
-        <span class="recent-list__amount">${sign}₹${formatCurrency(e.amount)}</span>
+        <span class="recent-list__amount">${sign}₹${formatCurrency(
+          e.amount
+        )}</span>
       </div>
       <div class="recent-list__meta">
         <span>${e.type === "income" ? "Collection" : "Expense"}</span>
@@ -1013,6 +1134,7 @@ function renderDataTable() {
     const typeTd = document.createElement("td");
     const badge = document.createElement("span");
     badge.className = "data-badge";
+    badge.dataset.kind = e.type === "income" ? "income" : "expense";
     badge.textContent = e.type === "income" ? "Collection" : "Expense";
     typeTd.appendChild(badge);
 
@@ -1024,7 +1146,20 @@ function renderDataTable() {
     amtTd.textContent = `${sign}₹${formatCurrency(e.amount)}`;
 
     const modeTd = document.createElement("td");
-    modeTd.textContent = e.paymentMode || "";
+    modeTd.textContent =
+      e.paymentMode === "google_pay"
+        ? "Google Pay"
+        : e.paymentMode === "phonepe"
+        ? "PhonePe"
+        : e.paymentMode === "paytm"
+        ? "Paytm"
+        : e.paymentMode === "upi_other"
+        ? "UPI – other"
+        : e.paymentMode === "bank_transfer"
+        ? "Bank transfer"
+        : e.paymentMode
+        ? e.paymentMode
+        : "";
 
     const noteTd = document.createElement("td");
     noteTd.textContent = e.note || "";
@@ -1282,7 +1417,7 @@ function updateDriveStatusUI(forceText) {
 
   if (hasToken) {
     pill.textContent = "Online · syncing with Google Drive";
-    if (signInBtn) signInBtn.style.display = "inline-flex";
+    if (signInBtn) signInBtn.style.display = "none";
     if (signOutBtn) signOutBtn.style.display = "inline-flex";
   } else {
     pill.textContent = "Offline · local-only mode";
